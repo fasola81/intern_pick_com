@@ -10,3 +10,959 @@
 [00:24:16.682] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
 [01:09:04.052] Server  LOG     ✓ Compiled in 216ms
 [01:09:04.471] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:23:56.149] Browser ERROR   ./app/layout.tsx:36:13
+Parsing ecmascript source code failed
+  34 |         <Script src="https://www.googletagmanager.com/gtag/js?id=G-9KGGX7WHJL" strategy="afterInteractive" />
+  35 |         <Script id="google-analytics" strategy="afterInteractive">
+> 36 |           {\`
+     |             ^
+> 37 |             window.dataLayer = window.dataLayer || [];
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             function gtag(){window.dataLayer.push(arguments);}
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             gtag('js', new Date());
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 | 
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 41 |             gtag('config', 'G-9KGGX7WHJL');
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 42 |           \`}
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 43 |         </Script>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 44 |       </body>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |     </html>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |   );
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 | }
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 48 | 
+     | ^
+
+Unterminated template
+[01:23:56.526] Browser ERROR   ./app/layout.tsx:36:13
+Parsing ecmascript source code failed
+  34 |         <Script src="https://www.googletagmanager.com/gtag/js?id=G-9KGGX7WHJL" strategy="afterInteractive" />
+  35 |         <Script id="google-analytics" strategy="afterInteractive">
+> 36 |           {\`
+     |             ^
+> 37 |             window.dataLayer = window.dataLayer || [];
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             function gtag(){window.dataLayer.push(arguments);}
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             gtag('js', new Date());
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 | 
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 41 |             gtag('config', 'G-9KGGX7WHJL');
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 42 |           \`}
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 43 |         </Script>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 44 |       </body>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |     </html>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |   );
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 | }
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 48 | 
+     | ^
+
+Unterminated template
+[01:24:08.840] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.840] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.841] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.842] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.842] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.842] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.843] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.843] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.844] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.844] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.845] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.845] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.846] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.847] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.847] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.848] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.848] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.849] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.849] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.849] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.850] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.850] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.851] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.851] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.851] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.852] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.852] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.852] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.854] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.854] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.854] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.855] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.855] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.855] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.856] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.856] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.857] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.857] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.858] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.858] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.859] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.859] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.859] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.859] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.859] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.860] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.860] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.860] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.861] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.861] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.861] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.862] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.862] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.862] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.862] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.862] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.863] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.863] Server  ERROR   ⨯ ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[01:24:08.974] Browser ERROR   ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+https://nextjs.org/docs/messages/module-not-found
+[01:24:09.526] Browser ERROR   ./app/layout.tsx:4:1
+Module not found: Can't resolve '@vercel/speed-insights/next'
+  2 | import { Geist, Geist_Mono } from "next/font/google";
+  3 | import Script from "next/script";
+> 4 | import { SpeedInsights } from "@vercel/speed-insights/next";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import "./globals.css";
+  6 |
+  7 | const geistSans = Geist({
+
+https://nextjs.org/docs/messages/module-not-found
