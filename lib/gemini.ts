@@ -196,3 +196,98 @@ JSON response:`
     }
   }
 }
+
+// ============================================
+// AI About Us Polish
+// ============================================
+export async function polishAboutUs(
+  rawText: string,
+  companyName: string,
+  industry: string
+): Promise<string> {
+  if (!GEMINI_API_KEY) {
+    return rawText
+  }
+
+  const prompt = `You are a professional copywriter for InternPick, a platform connecting high school students with local businesses for internships.
+
+A business called "${companyName}" in the "${industry}" industry has written a rough "About Us" description. Your job is to polish it into a professional, warm, and engaging paragraph that would appeal to high school students looking for internships.
+
+Rules:
+- Keep it concise (2-4 sentences max)
+- Make it sound professional but friendly and approachable
+- Highlight what makes the company a great place for students
+- Do NOT invent facts — only polish what's given
+- Do NOT use quotation marks around the output
+- Return ONLY the polished text, nothing else
+
+Raw text from the business:
+"${rawText.replace(/"/g, '\\"')}"
+
+Polished version:`
+
+  try {
+    const response = await callGemini(prompt)
+    return response.replace(/^["']|["']$/g, '').trim()
+  } catch (err) {
+    console.error('[Gemini] Polish about error:', err)
+    return rawText
+  }
+}
+
+// ============================================
+// AI Company Lookup
+// ============================================
+export interface CompanyLookupResult {
+  about: string
+  zipCode: string
+  employeeCount: string
+  phone: string
+}
+
+export async function lookupCompany(
+  companyName: string,
+  industry: string,
+  website: string
+): Promise<CompanyLookupResult> {
+  if (!GEMINI_API_KEY) {
+    return { about: '', zipCode: '', employeeCount: '', phone: '' }
+  }
+
+  const prompt = `You are an AI assistant for InternPick, a platform connecting high school students with local businesses.
+
+A business is setting up their profile. Based on the information below, try to find or infer additional details about this company. If you cannot confidently determine a field, leave it as an empty string.
+
+Company Name: "${companyName}"
+Industry: "${industry}"
+Website: ${website || 'Not provided'}
+
+Return ONLY valid JSON in this exact format (no markdown, no code blocks):
+{
+  "about": "A warm, professional 2-3 sentence description of the company suitable for high school students looking for internships. If you can find real info about this company from the website, use it. Otherwise write a plausible description based on the name and industry.",
+  "zipCode": "5-digit US zip code if you can determine the company's location, otherwise empty string",
+  "employeeCount": "One of: 1-5, 6-20, 21-50, 51-200, 200+ — your best estimate based on what you know, otherwise empty string",
+  "phone": "Business phone number if publicly available, otherwise empty string"
+}
+
+JSON response:`
+
+  try {
+    const response = await callGemini(prompt)
+    
+    let jsonStr = response
+    const jsonMatch = response.match(/\{[\s\S]*\}/)
+    if (jsonMatch) jsonStr = jsonMatch[0]
+    
+    const result = JSON.parse(jsonStr)
+    return {
+      about: result.about || '',
+      zipCode: (result.zipCode || '').replace(/\D/g, '').slice(0, 5),
+      employeeCount: result.employeeCount || '',
+      phone: result.phone || '',
+    }
+  } catch (err) {
+    console.error('[Gemini] Company lookup error:', err)
+    return { about: '', zipCode: '', employeeCount: '', phone: '' }
+  }
+}

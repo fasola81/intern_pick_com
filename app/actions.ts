@@ -2,11 +2,15 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { unstable_noStore as noStore } from 'next/cache'
-import { generateRolePrep, moderateMessage } from '@/lib/gemini'
+import { generateRolePrep, moderateMessage, polishAboutUs, lookupCompany } from '@/lib/gemini'
 
-// Fixed demo UUIDs for development (FK constraint dropped for dev mode)
-const DEMO_STUDENT_ID = '00000000-0000-0000-0000-000000000001'
-const DEMO_COMPANY_ID = '00000000-0000-0000-0000-000000000002'
+// Helper: require authenticated user or throw
+async function requireAuth(supabase: any) {
+  const { data: authData } = await supabase.auth.getUser()
+  const userId = authData?.user?.id
+  if (!userId) throw new Error('Not authenticated')
+  return { userId, email: authData.user.email || '' }
+}
 
 // ============================================
 // Student Onboarding
@@ -17,8 +21,14 @@ export async function createStudentProfile(data: {
   interests: string[]
 }) {
   const supabase = await createClient()
-  const { data: authData } = await supabase.auth.getUser()
-  const userId = authData?.user?.id || DEMO_STUDENT_ID
+  let userId: string, email: string
+  try {
+    const auth = await requireAuth(supabase)
+    userId = auth.userId
+    email = auth.email
+  } catch {
+    return { success: false, error: 'You must be logged in to create a profile' }
+  }
 
   // Upsert into users table
   const { error: userError } = await supabase
@@ -26,7 +36,7 @@ export async function createStudentProfile(data: {
     .upsert({
       id: userId,
       role: 'student',
-      full_name: 'Demo Student',
+      full_name: email.split('@')[0] || 'Student',
     }, { onConflict: 'id' })
 
   if (userError) {
@@ -54,16 +64,71 @@ export async function createStudentProfile(data: {
 }
 
 // ============================================
+// Check Company Availability (name + zip + website)
+// ============================================
+export async function checkCompanyAvailability(data: {
+  companyName: string
+  zipCode: string
+  website?: string
+}, excludeUserId?: string) {
+  const supabase = await createClient()
+
+  // Start with name + zip match
+  let query = supabase
+    .from('companies')
+    .select('id, company_name, zip_code, website')
+    .ilike('company_name', data.companyName.trim())
+    .eq('zip_code', data.zipCode.trim())
+
+  const { data: rows, error } = await query
+
+  if (error) {
+    console.error('[DB] company availability check error:', error)
+    return { available: true } // fail open
+  }
+
+  // Filter out current user's own record (for edit mode)
+  let matches = excludeUserId
+    ? rows?.filter((c: { id: string }) => c.id !== excludeUserId) || []
+    : rows || []
+
+  // If the registrant provided a website, also require website match
+  if (data.website && data.website.trim()) {
+    const normalizedUrl = data.website.trim().toLowerCase().replace(/\/+$/, '')
+    matches = matches.filter((c: { website: string | null }) => {
+      if (!c.website) return false
+      return c.website.toLowerCase().replace(/\/+$/, '') === normalizedUrl
+    })
+  }
+
+  if (matches.length > 0) {
+    return { available: false, existingCompany: matches[0].company_name }
+  }
+
+  return { available: true }
+}
+
+// ============================================
 // Employer Onboarding
 // ============================================
 export async function createEmployerProfile(data: {
   companyName: string
   industry: string
   zipCode: string
+  about?: string
+  website?: string
+  phone?: string
+  employeeCount?: string
+  status?: string
 }) {
   const supabase = await createClient()
-  const { data: authData } = await supabase.auth.getUser()
-  const userId = authData?.user?.id || DEMO_COMPANY_ID
+  let userId: string
+  try {
+    const auth = await requireAuth(supabase)
+    userId = auth.userId
+  } catch {
+    return { success: false, error: 'You must be logged in to create a profile' }
+  }
 
   const { error: userError } = await supabase
     .from('users')
@@ -78,14 +143,21 @@ export async function createEmployerProfile(data: {
     return { success: false, error: userError.message }
   }
 
+  const companyData: Record<string, string> = {
+    id: userId,
+    company_name: data.companyName,
+    industry: data.industry,
+    zip_code: data.zipCode,
+  }
+  if (data.about) companyData.about = data.about
+  if (data.website) companyData.website = data.website
+  if (data.phone) companyData.phone = data.phone
+  if (data.employeeCount) companyData.employee_count = data.employeeCount
+  if (data.status) companyData.status = data.status
+
   const { error: companyError } = await supabase
     .from('companies')
-    .upsert({
-      id: userId,
-      company_name: data.companyName,
-      industry: data.industry,
-      zip_code: data.zipCode,
-    }, { onConflict: 'id' })
+    .upsert(companyData, { onConflict: 'id' })
 
   if (companyError) {
     console.error('[DB] companies insert error:', companyError)
@@ -112,8 +184,13 @@ export async function createOpportunity(data: {
   description: string
 }) {
   const supabase = await createClient()
-  const { data: authData } = await supabase.auth.getUser()
-  const companyId = authData?.user?.id || DEMO_COMPANY_ID
+  let companyId: string
+  try {
+    const auth = await requireAuth(supabase)
+    companyId = auth.userId
+  } catch {
+    return { success: false, error: 'You must be logged in to post a role' }
+  }
 
   const { data: opp, error } = await supabase
     .from('opportunities')
@@ -194,8 +271,13 @@ export async function applyForOpportunity(data: {
   videoId?: string
 }) {
   const supabase = await createClient()
-  const { data: authData } = await supabase.auth.getUser()
-  const studentId = authData?.user?.id || DEMO_STUDENT_ID
+  let studentId: string
+  try {
+    const auth = await requireAuth(supabase)
+    studentId = auth.userId
+  } catch {
+    return { success: false, error: 'You must be logged in to apply' }
+  }
 
   const { error } = await supabase
     .from('interests')
@@ -221,8 +303,13 @@ export async function applyForOpportunity(data: {
 // ============================================
 export async function uploadStudentVideo(formData: FormData) {
   const supabase = await createClient()
-  const { data: authData } = await supabase.auth.getUser()
-  const studentId = authData?.user?.id || DEMO_STUDENT_ID
+  let studentId: string
+  try {
+    const auth = await requireAuth(supabase)
+    studentId = auth.userId
+  } catch {
+    return { success: false, error: 'You must be logged in to upload a video' }
+  }
 
   const videoFile = formData.get('video') as File
   const title = (formData.get('title') as string) || 'My Introduction'
@@ -282,8 +369,13 @@ export async function uploadStudentVideo(formData: FormData) {
 export async function getStudentVideos() {
   noStore()
   const supabase = await createClient()
-  const { data: authData } = await supabase.auth.getUser()
-  const studentId = authData?.user?.id || DEMO_STUDENT_ID
+  let studentId: string
+  try {
+    const auth = await requireAuth(supabase)
+    studentId = auth.userId
+  } catch {
+    return { success: false, data: [], error: 'You must be logged in' }
+  }
 
   const { data, error } = await supabase
     .from('student_videos')
@@ -322,12 +414,12 @@ export async function getRolePrep(opportunityId: string) {
 
   // Fetch student profile
   const { data: authData } = await supabase.auth.getUser()
-  const studentId = authData?.user?.id || DEMO_STUDENT_ID
-  const { data: student } = await supabase
+  const studentId = authData?.user?.id
+  const { data: student } = studentId ? await supabase
     .from('students')
     .select('interests_array, high_school_name')
     .eq('id', studentId)
-    .single()
+    .single() : { data: null }
 
   console.log('[RolePrep] Student profile:', student ? 'found' : 'not found')
 
@@ -445,8 +537,13 @@ export async function sendMessage(data: {
   senderRole: 'student' | 'company'
 }) {
   const supabase = await createClient()
-  const { data: authData } = await supabase.auth.getUser()
-  const senderId = authData?.user?.id || DEMO_STUDENT_ID
+  let senderId: string
+  try {
+    const auth = await requireAuth(supabase)
+    senderId = auth.userId
+  } catch {
+    return { success: false, blocked: false, error: 'You must be logged in to send messages' }
+  }
 
   // AI Moderation Check
   const modResult = await moderateMessage(data.text, data.senderRole)
@@ -475,4 +572,82 @@ export async function sendMessage(data: {
   // Message is safe — in production this would insert into a messages table
   console.log('[AI] ✅ Message approved and sent')
   return { success: true, blocked: false }
+}
+
+// ============================================
+// Polish Company About (AI)
+// ============================================
+export async function polishCompanyAbout(data: {
+  text: string
+  companyName: string
+  industry: string
+}) {
+  const polished = await polishAboutUs(data.text, data.companyName, data.industry)
+  return { success: true, polished }
+}
+
+// ============================================
+// Lookup Company Info (AI)
+// ============================================
+export async function lookupCompanyInfo(data: {
+  companyName: string
+  industry: string
+  website: string
+}) {
+  const result = await lookupCompany(data.companyName, data.industry, data.website)
+  return { success: true, ...result }
+}
+
+// ============================================
+// Upload Company Logo
+// ============================================
+export async function uploadCompanyLogo(formData: FormData) {
+  const supabase = await createClient()
+  let userId: string
+  try {
+    const auth = await requireAuth(supabase)
+    userId = auth.userId
+  } catch {
+    return { success: false, error: 'You must be logged in to upload a logo' }
+  }
+
+  const logoFile = formData.get('logo') as File
+  if (!logoFile) {
+    return { success: false, error: 'No file provided' }
+  }
+
+  // Upload to storage
+  const ext = logoFile.name.split('.').pop() || 'png'
+  const fileName = `${userId}/logo.${ext}`
+  const { error: uploadError } = await supabase.storage
+    .from('company-logos')
+    .upload(fileName, logoFile, {
+      contentType: logoFile.type,
+      upsert: true,
+    })
+
+  if (uploadError) {
+    console.error('[DB] logo upload error:', uploadError)
+    return { success: false, error: uploadError.message }
+  }
+
+  // Get public URL
+  const { data: urlData } = supabase.storage
+    .from('company-logos')
+    .getPublicUrl(fileName)
+
+  const logoUrl = urlData.publicUrl
+
+  // Save to companies table
+  const { error: dbError } = await supabase
+    .from('companies')
+    .upsert({ id: userId, logo_url: logoUrl }, { onConflict: 'id' })
+
+  if (dbError) {
+    console.error('[DB] logo_url update error:', dbError)
+    return { success: false, error: dbError.message }
+  }
+
+  console.log('[DB] ✅ Logo uploaded:', logoUrl)
+  return { success: true, logoUrl }
 }

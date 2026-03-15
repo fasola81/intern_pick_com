@@ -84,9 +84,9 @@ export default function CreateRolePage() {
 
   const handleAIGenerate = () => {
     setIsGenerating(true)
-    // Simulate AI generation delay
+    // Placeholder — will be connected to AI in production
     setTimeout(() => {
-      setDescription("As a Marketing Intern at Springfield Coffee Co., you will be responsible for creating engaging social media content, responding to customer inquiries online, and assisting with local community events. You'll gain hands-on experience with modern marketing tools and learn how to build a brand voice in a fast-paced environment.")
+      setDescription("Describe the role responsibilities, skills the intern will develop, and what a typical day looks like. Be specific to attract the right candidates.")
       setIsGenerating(false)
     }, 1500)
   }
@@ -258,8 +258,6 @@ export default function CreateRolePage() {
                     <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Hiring Manager</label>
                     <select className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all appearance-none text-slate-900 dark:text-white">
                       <option value="">Select Manager</option>
-                      <option value="sarah_j">Sarah Jenkins (Store Manager)</option>
-                      <option value="david_l">David Lee (Marketing Dir.)</option>
                     </select>
                   </div>
                 </div>

@@ -5,7 +5,7 @@ export function Footer() {
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className="bg-slate-950 border-t border-slate-800">
+    <footer className="bg-slate-100 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
       <div className="max-w-7xl mx-auto px-4 py-12 md:py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12 mb-12">
           {/* Brand & SwiftLearn logo */}
@@ -18,14 +18,14 @@ export function Footer() {
                 height={100} 
                 className="block h-9 w-auto object-contain"
               />
-              <span className="text-2xl font-bold tracking-tight text-brand-400">
+              <span className="text-2xl font-bold tracking-tight text-brand-600 dark:text-brand-400">
                 InternPick.com
               </span>
             </Link>
-            <p className="text-slate-400 leading-relaxed max-w-sm">
+            <p className="text-slate-600 dark:text-slate-400 leading-relaxed max-w-sm">
               The premier platform connecting ambitious high school students with local businesses in their community.
             </p>
-            <div className="pt-4 flex items-center gap-3 text-slate-400">
+            <div className="pt-4 flex items-center gap-3 text-slate-500 dark:text-slate-400">
               <span className="text-sm font-medium">Powered by</span>
               <a
                 href="https://swiftlearn.ai"
@@ -46,20 +46,20 @@ export function Footer() {
 
           {/* Platform Links */}
           <div className="space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">Platform</h3>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">Platform</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/login?role=student" className="text-slate-400 hover:text-brand-400 transition-colors">
+                <Link href="/login?role=student" className="text-slate-600 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
                   For Students
                 </Link>
               </li>
               <li>
-                <Link href="/login?role=employer" className="text-slate-400 hover:text-brand-400 transition-colors">
+                <Link href="/login?role=employer" className="text-slate-600 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
                   For Businesses
                 </Link>
               </li>
               <li>
-                <Link href="/login" className="text-slate-400 hover:text-brand-400 transition-colors">
+                <Link href="/login" className="text-slate-600 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
                   Sign In
                 </Link>
               </li>
@@ -68,20 +68,20 @@ export function Footer() {
 
           {/* Company Links */}
           <div className="space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">Company</h3>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">Company</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/about" className="text-slate-400 hover:text-brand-400 transition-colors">
+                <Link href="/about" className="text-slate-600 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
                   About Us
                 </Link>
               </li>
               <li>
-                <Link href="/#how-it-works" className="text-slate-400 hover:text-brand-400 transition-colors">
+                <Link href="/#how-it-works" className="text-slate-600 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
                   How it Works
                 </Link>
               </li>
               <li>
-                <a href="https://swiftlearn.ai" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-brand-400 transition-colors flex items-center gap-1">
+                <a href="https://swiftlearn.ai" target="_blank" rel="noopener noreferrer" className="text-slate-600 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors flex items-center gap-1">
                   SwiftLearn
                   <span className="text-xs">↗</span>
                 </a>
@@ -91,16 +91,11 @@ export function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-400">
+        <div className="pt-8 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
           <p>© {currentYear} InternPick.com. Empowering young careers.</p>
           <div className="flex flex-wrap justify-center md:justify-end items-center gap-4 md:gap-6">
-            <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
-            <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-            <span className="w-1 h-1 rounded-full bg-slate-700 hidden md:block"></span>
-            {/* Social fallbacks since icons aren't installed yet */}
-            <span className="hover:text-brand-400 cursor-not-allowed transition-colors">X (Twitter)</span>
-            <span className="hover:text-brand-400 cursor-not-allowed transition-colors">Instagram</span>
-            <span className="hover:text-brand-400 cursor-not-allowed transition-colors">LinkedIn</span>
+            <Link href="/terms" className="hover:text-slate-900 dark:hover:text-white transition-colors">Terms of Service</Link>
+            <Link href="/privacy" className="hover:text-slate-900 dark:hover:text-white transition-colors">Privacy Policy</Link>
           </div>
         </div>
       </div>

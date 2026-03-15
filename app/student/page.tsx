@@ -8,6 +8,7 @@ import { getActiveOpportunities, applyForOpportunity, uploadStudentVideo } from 
 import VideoRecorder from '@/components/VideoRecorder'
 import VideoLibrary from '@/components/VideoLibrary'
 import RolePrep from '@/components/RolePrep'
+import { createBrowserClient } from '@supabase/ssr'
 
 export default function StudentDashboard() {
   const [selectedRole, setSelectedRole] = useState<string | null>(null)
@@ -25,34 +26,41 @@ export default function StudentDashboard() {
   const [activeFilter, setActiveFilter] = useState('all')
   const [savedRoles, setSavedRoles] = useState<Record<string, boolean>>({})
   const [readMoreRole, setReadMoreRole] = useState<any | null>(null)
-
-  // Fallback demo data when DB returns nothing
-  const fallbackOpportunities = [
-    {
-      id: 'demo-1', title: 'Social Media Intern', category: 'marketing',
-      description: 'Looking for a creative student to help manage our social media presence (Instagram, TikTok) and design local promotional campaigns.',
-      compensation: 'paid', hourly_rate: 15, work_setting: 'onsite', hours_per_week: 15,
-      companies: { company_name: 'Springfield Coffee Co.', industry: 'food' },
-    },
-    {
-      id: 'demo-2', title: 'Digital Marketing Trainee', category: 'marketing',
-      description: 'Learn SEO, content strategy, and paid ads by shadowing our senior marketing managers. Great opportunity to build a portfolio.',
-      compensation: 'credit', hourly_rate: null, work_setting: 'remote', hours_per_week: 10,
-      companies: { company_name: 'TechFlow Agency', industry: 'tech' },
-    },
-  ]
+  const [userName, setUserName] = useState('')
+  const [userSchool, setUserSchool] = useState('')
+  const [userInterests, setUserInterests] = useState<string[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    async function fetchOpportunities() {
+    async function init() {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
+
+      // Fetch user info
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setUserName(user.email?.split('@')[0] || 'Student')
+        const { data: profile } = await supabase
+          .from('students')
+          .select('high_school_name, interests_array')
+          .eq('id', user.id)
+          .single()
+        if (profile) {
+          setUserSchool(profile.high_school_name || '')
+          setUserInterests(profile.interests_array || [])
+        }
+      }
+
+      // Fetch opportunities
       const result = await getActiveOpportunities()
       if (result.success && result.data.length > 0) {
-        console.log('[Feed] Loaded', result.data.length, 'opportunities from DB')
         setDbOpportunities(result.data)
-      } else {
-        console.log('[Feed] No DB results, using demo data')
       }
+      setIsLoading(false)
     }
-    fetchOpportunities()
+    init()
   }, [])
 
   const handleApply = async () => {
@@ -122,16 +130,16 @@ export default function StudentDashboard() {
               <div className="w-24 h-24 bg-gradient-to-tr from-brand-100 to-brand-50 dark:from-brand-900/50 dark:to-slate-800 rounded-full flex items-center justify-center text-4xl mb-4 border-4 border-white dark:border-slate-900 shadow-md">
                 👨‍🎓
               </div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Alex Chen</h2>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-4 text-center">Senior • Marketing Major<br/>Springfield University</p>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">{userName || 'Student'}</h2>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-4 text-center">{userSchool || 'Complete your profile'}</p>
               
               <div className="w-full bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 mb-4 border border-slate-100 dark:border-slate-800">
                 <div className="flex justify-between text-xs font-bold mb-2 uppercase tracking-wider text-slate-500">
                   <span>Profile Strength</span>
-                  <span className="text-brand-600 dark:text-brand-400">85%</span>
+                  <span className="text-brand-600 dark:text-brand-400">{userSchool && userInterests.length > 0 ? '100%' : userSchool || userInterests.length > 0 ? '50%' : '25%'}</span>
                 </div>
                 <div className="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-brand-500 w-[85%] rounded-full"></div>
+                  <div className={`h-full bg-brand-500 rounded-full transition-all duration-500`} style={{ width: userSchool && userInterests.length > 0 ? '100%' : userSchool || userInterests.length > 0 ? '50%' : '25%' }}></div>
                 </div>
               </div>
 
@@ -149,7 +157,6 @@ export default function StudentDashboard() {
               <Link href="/student/messages" className="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl font-semibold transition-colors group">
                 <span className="text-xl group-hover:scale-110 transition-transform">💬</span>
                 Messages
-                <span className="ml-auto bg-brand-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">2</span>
               </Link>
               <Link href="/student/applications" className="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl font-semibold transition-colors group">
                 <span className="text-xl group-hover:scale-110 transition-transform">📄</span>
@@ -170,10 +177,13 @@ export default function StudentDashboard() {
             <section className="bg-gradient-to-r from-brand-600 to-indigo-600 rounded-[2rem] p-6 md:p-8 text-white shadow-md relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-6 opacity-10 text-8xl pointer-events-none group-hover:scale-110 group-hover:rotate-6 transition-all duration-700">🚀</div>
               <h1 className="text-2xl md:text-3xl font-bold mb-2 tracking-tight">
-                Good morning, Alex! 
+                Welcome back{userName ? `, ${userName}` : ''}! 
               </h1>
               <p className="text-brand-100 max-w-md">
-                You have <span className="font-bold text-white">{dbOpportunities.length || 2} highly rated matches</span> waiting for you today based on your profile.
+                {dbOpportunities.length > 0 
+                  ? <>You have <span className="font-bold text-white">{dbOpportunities.length} matches</span> waiting for you today.</>
+                  : 'Check back soon for new internship opportunities in your area.'
+                }
               </p>
             </section>
 
@@ -202,7 +212,18 @@ export default function StudentDashboard() {
             {/* The Match Engine Feed */}
             <section className="flex flex-col gap-6 pb-10">
               
-              {(dbOpportunities.length > 0 ? dbOpportunities : fallbackOpportunities)
+              {isLoading ? (
+                <div className="text-center py-16">
+                  <div className="w-12 h-12 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-slate-500 dark:text-slate-400 font-medium">Loading opportunities...</p>
+                </div>
+              ) : dbOpportunities.length === 0 ? (
+                <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-12 text-center">
+                  <div className="text-6xl mb-4">🔍</div>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No roles available yet</h3>
+                  <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto">New internship opportunities are being added regularly. Check back soon or update your profile to get matched!</p>
+                </div>
+              ) : dbOpportunities
                 .filter((opp: any) => {
                   if (activeFilter === 'all') return true
                   if (activeFilter === 'marketing') return opp.category === 'marketing'
@@ -217,7 +238,7 @@ export default function StudentDashboard() {
                 const compType = opp.compensation || 'unpaid'
                 const rate = opp.hourly_rate
                 const setting = opp.work_setting || 'onsite'
-                const oppId = opp.id || `demo-${index}`
+                const oppId = opp.id
                 const matchScore = Math.max(70, Math.min(99, 98 - index * 2))
                 
                 const compLabel = compType === 'paid' && rate ? `Paid ($${rate}/hr)` : compType === 'credit' ? 'School Credit' : compType === 'paid' ? 'Paid' : 'Unpaid'

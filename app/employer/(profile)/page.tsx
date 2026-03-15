@@ -1,25 +1,83 @@
 "use client"
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
+import { createBrowserClient } from '@supabase/ssr'
 
 export default function EmployerOverviewPage() {
+  const [companyName, setCompanyName] = useState('')
+  const [roles, setRoles] = useState<any[]>([])
+  const [applicationCount, setApplicationCount] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchData() {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setIsLoading(false); return }
+
+      // Get company name
+      const { data: company } = await supabase
+        .from('companies')
+        .select('company_name')
+        .eq('id', user.id)
+        .single()
+      if (company) setCompanyName(company.company_name || '')
+
+      // Get roles
+      const { data: opps } = await supabase
+        .from('opportunities')
+        .select('*')
+        .eq('company_id', user.id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+      setRoles(opps || [])
+
+      // Get total application count
+      if (opps && opps.length > 0) {
+        const oppIds = opps.map(o => o.id)
+        const { count } = await supabase
+          .from('interests')
+          .select('*', { count: 'exact', head: true })
+          .in('opportunity_id', oppIds)
+        setApplicationCount(count || 0)
+      }
+
+      setIsLoading(false)
+    }
+    fetchData()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="w-12 h-12 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin mb-4"></div>
+        <p className="text-slate-500 dark:text-slate-400 font-medium">Loading dashboard...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-8 animate-fade-in-up">
       
       {/* 1. Welcome & High-Level Metrics */}
       <section className="flex flex-col gap-6">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">Welcome back, Sarah! 👋</h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Here is what's happening with your recruitment pipeline today.</p>
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">
+            Welcome back{companyName ? `, ${companyName}` : ''}! 👋
+          </h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Here is what's happening with your recruitment pipeline.</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between group cursor-pointer hover:border-brand-300 transition-colors">
             <div>
               <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Active Roles</p>
-              <p className="text-3xl font-black text-slate-900 dark:text-white group-hover:text-brand-600 transition-colors">3</p>
+              <p className="text-3xl font-black text-slate-900 dark:text-white group-hover:text-brand-600 transition-colors">{roles.length}</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center text-xl">
               💼
@@ -28,101 +86,69 @@ export default function EmployerOverviewPage() {
           
           <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between group cursor-pointer hover:border-brand-300 transition-colors">
             <div>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">New Matches (7d)</p>
-              <p className="text-3xl font-black text-slate-900 dark:text-white group-hover:text-brand-600 transition-colors">17</p>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total Applications</p>
+              <p className="text-3xl font-black text-slate-900 dark:text-white group-hover:text-brand-600 transition-colors">{applicationCount}</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-orange-50 dark:bg-orange-900/30 text-orange-600 flex items-center justify-center text-xl">
               ✨
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between group cursor-pointer hover:border-brand-300 transition-colors">
+          <Link href="/employer/create" className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 shadow-sm flex items-center justify-between group cursor-pointer hover:border-brand-400 hover:bg-brand-50/50 dark:hover:bg-brand-900/10 transition-all">
             <div>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Upcoming Interviews</p>
-              <p className="text-3xl font-black text-slate-900 dark:text-white group-hover:text-brand-600 transition-colors">1</p>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Post New Role</p>
+              <p className="text-xl font-black text-brand-600 dark:text-brand-400 group-hover:text-brand-700 transition-colors">+ Create</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 flex items-center justify-center text-xl">
-              📅
+            <div className="w-12 h-12 rounded-xl bg-brand-50 dark:bg-brand-900/30 text-brand-600 flex items-center justify-center text-xl">
+              ➕
             </div>
-          </div>
+          </Link>
         </div>
-      </section>
-
-      {/* 2. Needs Attention Alerts */}
-      <section className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-2xl p-5 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div className="flex gap-3 items-start">
-          <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-600 text-lg flex-shrink-0 mt-0.5 sm:mt-0">
-            🔔
-          </div>
-          <div>
-            <h3 className="font-bold text-amber-900 dark:text-amber-100 text-sm">Interview Accepted!</h3>
-            <p className="text-sm text-amber-800 dark:text-amber-200/80 font-medium">Sarah Jenkins accepted your interview request for Tomorrow at 4:00 PM.</p>
-          </div>
-        </div>
-        <Link href="/employer/interviews" className="w-full sm:w-auto">
-          <Button variant="outline" className="w-full sm:w-auto bg-white hover:bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:border-amber-700/50 dark:text-amber-100 rounded-xl text-sm h-9">
-            View Schedule
-          </Button>
-        </Link>
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* 3. Pipeline Snapshot */}
+        {/* 2. Pipeline Snapshot */}
         <section className="lg:col-span-2 flex flex-col gap-4">
           <div className="flex justify-between items-center">
-            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Pipeline Snapshot</h3>
-            <Link href="/employer/roles" className="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300">View All Roles &rarr;</Link>
+            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Your Active Roles</h3>
+            <Link href="/employer/roles" className="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300">View All &rarr;</Link>
           </div>
           
-          <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
-            
-            <div className="p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-              <div>
-                <h4 className="font-bold text-slate-900 dark:text-white">Social Media Assistant</h4>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">Marketing • Fall 2026</p>
-              </div>
-              <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 gap-1 w-full sm:w-auto">
-                <div className="flex-1 sm:w-20 bg-white dark:bg-slate-900 rounded-lg p-2 flex flex-col items-center justify-center shadow-sm">
-                  <span className="text-lg font-black text-slate-900 dark:text-white">5</span>
-                  <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Matches</span>
-                </div>
-                <div className="flex-1 sm:w-20 bg-white dark:bg-slate-900 rounded-lg p-2 flex flex-col items-center justify-center shadow-sm border border-brand-200 dark:border-brand-800/50">
-                  <span className="text-lg font-black text-brand-600 dark:text-brand-400">2</span>
-                  <span className="text-[10px] uppercase font-bold text-brand-600/70 tracking-wider">Shortlist</span>
-                </div>
-                <div className="flex-1 sm:w-20 bg-white dark:bg-slate-900 rounded-lg p-2 flex flex-col items-center justify-center shadow-sm">
-                  <span className="text-lg font-black text-slate-900 dark:text-white">1</span>
-                  <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Interviews</span>
-                </div>
-              </div>
+          {roles.length === 0 ? (
+            <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm p-12 text-center">
+              <div className="text-5xl mb-4">📋</div>
+              <h4 className="font-bold text-slate-900 dark:text-white mb-2">No roles posted yet</h4>
+              <p className="text-slate-500 dark:text-slate-400 mb-6">Create your first internship role to start receiving applications from local students.</p>
+              <Link href="/employer/create">
+                <Button>Post Your First Role</Button>
+              </Link>
             </div>
-
-            <div className="p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-              <div>
-                <h4 className="font-bold text-slate-900 dark:text-white">Weekend Barista Trainee</h4>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">Operations • Year-round</p>
-              </div>
-              <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 gap-1 w-full sm:w-auto">
-                <div className="flex-1 sm:w-20 bg-white dark:bg-slate-900 rounded-lg p-2 flex flex-col items-center justify-center shadow-sm">
-                  <span className="text-lg font-black text-slate-900 dark:text-white">12</span>
-                  <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Matches</span>
+          ) : (
+            <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
+              {roles.map((role) => (
+                <div key={role.id} className="p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <div>
+                    <h4 className="font-bold text-slate-900 dark:text-white">{role.title}</h4>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5 capitalize">{role.category || 'General'} • {role.work_setting || 'On-site'}</p>
+                  </div>
+                  <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 gap-1 w-full sm:w-auto">
+                    <div className="flex-1 sm:w-20 bg-white dark:bg-slate-900 rounded-lg p-2 flex flex-col items-center justify-center shadow-sm">
+                      <span className="text-lg font-black text-brand-600 dark:text-brand-400">{role.compensation === 'paid' ? `$${role.hourly_rate || '—'}` : role.compensation === 'credit' ? 'Credit' : 'Vol.'}</span>
+                      <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Pay</span>
+                    </div>
+                    <div className="flex-1 sm:w-20 bg-white dark:bg-slate-900 rounded-lg p-2 flex flex-col items-center justify-center shadow-sm">
+                      <span className="text-lg font-black text-slate-900 dark:text-white">{role.hours_per_week || '—'}</span>
+                      <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Hrs/wk</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1 sm:w-20 bg-white dark:bg-slate-900 rounded-lg p-2 flex flex-col items-center justify-center shadow-sm">
-                  <span className="text-lg font-black text-slate-400 dark:text-slate-600">-</span>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Shortlist</span>
-                </div>
-                <div className="flex-1 sm:w-20 bg-white dark:bg-slate-900 rounded-lg p-2 flex flex-col items-center justify-center shadow-sm">
-                  <span className="text-lg font-black text-slate-400 dark:text-slate-600">-</span>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Interviews</span>
-                </div>
-              </div>
+              ))}
             </div>
-
-          </div>
+          )}
         </section>
 
-        {/* 4. Quick Actions */}
+        {/* 3. Quick Actions */}
         <section className="flex flex-col gap-4">
           <h3 className="font-bold text-slate-900 dark:text-white text-lg">Quick Actions</h3>
           <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm p-4 flex flex-col gap-2">

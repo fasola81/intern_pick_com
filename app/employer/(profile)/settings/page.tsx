@@ -5,13 +5,10 @@ import { Button } from '@/components/ui/Button'
 
 export default function EmployerSettingsPage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'team'>('profile')
-  const [businessUnits, setBusinessUnits] = useState(["Marketing Team", "Store Operations"])
+  const [businessUnits, setBusinessUnits] = useState<string[]>([])
   
   type HiringManager = { name: string; email: string; phone: string; }
-  const [hiringManagers, setHiringManagers] = useState<HiringManager[]>([
-    { name: "Sarah Jenkins (Store Manager)", email: "sarah@springfieldcoffee.co", phone: "555-0101" },
-    { name: "David Lee (Marketing Dir.)", email: "david@springfieldcoffee.co", phone: "555-0102" }
-  ])
+  const [hiringManagers, setHiringManagers] = useState<HiringManager[]>([])
 
   const predefinedBusinessUnits = [
     "Software Engineering", "Product Management", "Design", "Marketing", "Sales", "Human Resources", "Operations", "Customer Support", "Finance", "Store Operations"
@@ -112,7 +109,8 @@ export default function EmployerSettingsPage() {
                       <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Company Name</label>
                       <input 
                         type="text" 
-                        defaultValue="Springfield Coffee Co."
+                        defaultValue=""
+                        placeholder="Your company name"
                         className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
                       />
                     </div>
@@ -121,7 +119,8 @@ export default function EmployerSettingsPage() {
                       <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Headquarters / Main Location</label>
                       <input 
                         type="text" 
-                        defaultValue="Springfield, IL"
+                        defaultValue=""
+                        placeholder="City, State"
                         className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
                       />
                     </div>
@@ -130,7 +129,8 @@ export default function EmployerSettingsPage() {
                       <label className="text-sm font-bold text-slate-700 dark:text-slate-300">About Us</label>
                       <textarea 
                         rows={5}
-                        defaultValue="We are a local, independent coffee roaster dedicated to sourcing ethical beans and building community spaces. We love hiring ambitious students looking to learn."
+                        defaultValue=""
+                        placeholder="Describe your company, mission, and what makes you a great place for students to intern..."
                         className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all resize-y"
                       ></textarea>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">This will be displayed on all your internship listings.</p>
@@ -141,7 +141,7 @@ export default function EmployerSettingsPage() {
                       <input 
                         type="url" 
                         placeholder="https://"
-                        defaultValue="https://springfieldcoffee.co"
+                        defaultValue=""
                         className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
                       />
                     </div>

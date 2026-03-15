@@ -286,14 +286,14 @@ export default function Home() {
           </div>
           
           <div className="max-w-4xl mx-auto text-center relative z-10">
-            <span className="inline-block py-1 px-3 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-900/50 dark:text-brand-300 text-sm font-semibold tracking-wide mb-6 uppercase">
-              Coming Soon
+            <span className="inline-block py-1 px-3 rounded-full bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300 text-sm font-semibold tracking-wide mb-6 uppercase">
+              Now Live
             </span>
             <h2 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white mb-6">
               The Springfield, NJ Pilot
             </h2>
             <p className="text-xl md:text-xl text-slate-600 dark:text-slate-400 mb-10 leading-relaxed">
-              We're launching our local pilot connecting driven high school students and local businesses right here in Springfield, New Jersey. Be part of the inaugural cohort shaping the future of internships.
+              We've launched our local pilot connecting driven high school students and local businesses right here in Springfield, New Jersey. Join the inaugural cohort shaping the future of internships.
             </p>
             <div className="flex justify-center gap-6 flex-wrap">
               <div className="bg-slate-50 dark:bg-slate-900 px-8 py-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-center min-w-[200px]">
@@ -305,36 +305,9 @@ export default function Home() {
                 <span className="text-slate-600 dark:text-slate-300 font-medium">Business Partners</span>
               </div>
             </div>
-            <div className="mt-12">
-              <Link href="/login">
-                <Button size="lg" className="px-10">Join the Waitlist</Button>
-              </Link>
-            </div>
           </div>
         </section>
       </main>
-
-      {/* Basic Footer */}
-      <footer className="bg-slate-100 dark:bg-slate-900 py-12 px-4 border-t border-slate-200 dark:border-slate-800">
-        <div className="max-w-7xl mx-auto flex flex-col items-center gap-4 text-slate-500 dark:text-slate-400 text-sm">
-          <p>© {new Date().getFullYear()} InternPick. Empowering young careers.</p>
-          <a
-            href="https://swiftlearn.ai"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-          >
-            Powered by
-            <Image
-              src="/icons/logo/SL_footer_Logo.png"
-              alt="SwiftLearn Logo"
-              width={120}
-              height={30}
-              className="h-6 w-auto object-contain"
-            />
-          </a>
-        </div>
-      </footer>
     </div>
   )
 }
