@@ -1,0 +1,247 @@
+"use client"
+
+import React, { useState } from 'react'
+import { Navbar } from '@/components/Navbar'
+import { Button } from '@/components/ui/Button'
+import Link from 'next/link'
+import { createClient } from '@/utils/supabase/client'
+
+export default function SignupPage() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [role, setRole] = useState<'student' | 'employer'>('student')
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+
+  const passwordStrength = (() => {
+    if (password.length === 0) return { label: '', color: '', width: '0%' }
+    if (password.length < 6) return { label: 'Too short', color: 'bg-red-500', width: '20%' }
+    if (password.length < 8) return { label: 'Weak', color: 'bg-orange-500', width: '40%' }
+    if (/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) return { label: 'Strong', color: 'bg-green-500', width: '100%' }
+    if (/(?=.*\d)/.test(password) || /(?=.*[A-Z])/.test(password)) return { label: 'Medium', color: 'bg-yellow-500', width: '60%' }
+    return { label: 'Weak', color: 'bg-orange-500', width: '40%' }
+  })()
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.')
+      return
+    }
+
+    setIsLoading(true)
+
+    const supabase = createClient()
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { role },
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${role === 'employer' ? '/onboarding/employer' : '/onboarding/student'}`,
+      },
+    })
+
+    setIsLoading(false)
+
+    if (error) {
+      if (error.message.includes('already registered')) {
+        setError('This email is already registered. Try signing in instead.')
+      } else {
+        setError(error.message)
+      }
+      return
+    }
+
+    setSuccess(true)
+  }
+
+  if (success) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 md:p-10 border border-slate-200 dark:border-slate-800 shadow-xl w-full max-w-md text-center">
+            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 border border-green-200 dark:border-green-800/50">
+              📧
+            </div>
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-3">Check Your Email</h1>
+            <p className="text-slate-600 dark:text-slate-400 mb-2 leading-relaxed">
+              We've sent a verification link to <span className="font-bold text-slate-900 dark:text-white">{email}</span>.
+            </p>
+            <p className="text-slate-500 dark:text-slate-500 text-sm mb-8">
+              Click the link in the email to activate your account and complete your profile setup.
+            </p>
+            <Link href="/login">
+              <Button variant="outline" className="rounded-xl px-6 border-slate-200 dark:border-slate-700">
+                Back to Sign In
+              </Button>
+            </Link>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+      <Navbar />
+      <main className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 md:p-10 border border-slate-200 dark:border-slate-800 shadow-xl">
+            
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-brand-100 dark:bg-brand-900/30 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-brand-200 dark:border-brand-800/50">
+                🚀
+              </div>
+              <h1 className="text-2xl font-black text-slate-900 dark:text-white">Create Your Account</h1>
+              <p className="text-slate-500 dark:text-slate-400 mt-2">Join InternPick and start matching today</p>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div className="mb-6 px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl text-sm text-red-700 dark:text-red-300 flex items-center gap-2">
+                <span>⚠️</span> {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSignup} className="space-y-4">
+              
+              {/* Role Toggle */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">I am a...</label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setRole('student')}
+                    className={`py-2.5 rounded-lg text-sm font-bold transition-all ${
+                      role === 'student'
+                        ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
+                    }`}
+                  >
+                    🎓 Student
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole('employer')}
+                    className={`py-2.5 rounded-lg text-sm font-bold transition-all ${
+                      role === 'employer'
+                        ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
+                    }`}
+                  >
+                    🏢 Business
+                  </button>
+                </div>
+              </div>
+
+              {/* Email */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-slate-900 dark:text-white placeholder:text-slate-400"
+                />
+              </div>
+
+              {/* Password */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Min. 8 characters"
+                  required
+                  minLength={8}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-slate-900 dark:text-white placeholder:text-slate-400"
+                />
+                {/* Strength Indicator */}
+                {password.length > 0 && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="flex-1 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <div className={`h-full ${passwordStrength.color} rounded-full transition-all duration-300`} style={{ width: passwordStrength.width }}></div>
+                    </div>
+                    <span className="text-xs font-semibold text-slate-500">{passwordStrength.label}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Confirm Password */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Confirm Password</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter password"
+                  required
+                  minLength={8}
+                  className={`w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-slate-900 dark:text-white placeholder:text-slate-400 ${
+                    confirmPassword && confirmPassword !== password
+                      ? 'border-red-300 dark:border-red-700'
+                      : 'border-slate-200 dark:border-slate-700'
+                  }`}
+                />
+                {confirmPassword && confirmPassword !== password && (
+                  <p className="text-xs text-red-500 font-medium">Passwords do not match</p>
+                )}
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isLoading || password !== confirmPassword || password.length < 8}
+                className="w-full rounded-xl font-bold py-6 text-md shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                    Creating account...
+                  </span>
+                ) : 'Create Account'}
+              </Button>
+            </form>
+
+            {/* Terms */}
+            <p className="text-xs text-center text-slate-400 dark:text-slate-500 mt-4 leading-relaxed">
+              By creating an account, you agree to our{' '}
+              <Link href="/terms" className="underline hover:text-slate-600">Terms of Service</Link>{' '}
+              and <Link href="/privacy" className="underline hover:text-slate-600">Privacy Policy</Link>.
+            </p>
+
+            {/* Divider */}
+            <div className="my-6 flex items-center gap-3">
+              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">already have an account?</span>
+              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+            </div>
+
+            <Link href="/login" className="block">
+              <Button variant="outline" className="w-full rounded-xl font-semibold border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
+                Sign In Instead
+              </Button>
+            </Link>
+          </div>
+
+          <p className="text-center text-sm text-slate-500 dark:text-slate-500 mt-6">
+            <Link href="/" className="hover:underline">← Back to home</Link>
+          </p>
+        </div>
+      </main>
+    </div>
+  )
+}
