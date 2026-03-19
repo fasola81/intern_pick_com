@@ -18,11 +18,14 @@ CREATE TABLE IF NOT EXISTS invitations (
 ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
 
 -- Permissive policies for development
+DROP POLICY IF EXISTS "allow_insert_invitations" ON invitations;
 CREATE POLICY "allow_insert_invitations" ON invitations
   FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "allow_select_invitations" ON invitations;
 CREATE POLICY "allow_select_invitations" ON invitations
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "allow_update_invitations" ON invitations;
 CREATE POLICY "allow_update_invitations" ON invitations
   FOR UPDATE USING (true);

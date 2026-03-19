@@ -43,6 +43,8 @@ export default function LoginPage() {
     
     if (role === 'employer') {
       router.push('/employer')
+    } else if (role === 'educator') {
+      router.push('/educator')
     } else {
       router.push('/student')
     }

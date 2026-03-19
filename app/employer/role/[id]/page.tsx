@@ -34,6 +34,7 @@ export default function RoleDetailPage() {
   const [previewAvatarUrl, setPreviewAvatarUrl] = useState<string | null>(null)
   const [generationError, setGenerationError] = useState<string | null>(null)
   const [showFullPreviewModal, setShowFullPreviewModal] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchRole() {
@@ -64,32 +65,55 @@ export default function RoleDetailPage() {
     if (roleId) fetchRole()
   }, [roleId])
 
-  const handleSave = async () => {
+  const handleSave = async (overrideAvatarUrl?: string | null, overrideAvatarSvg?: string | null) => {
     setIsSaving(true)
+    setSaveError(null)
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
-    const { error } = await supabase
-      .from('opportunities')
-      .update({
-        title,
-        description,
-        category,
-        compensation,
-        work_setting: workSetting,
-        hours_per_week: parseInt(hoursPerWeek) || null,
-        is_active: isActive,
-        avatar_svg: avatarSvg,
-        avatar_url: avatarUrl,
-      })
-      .eq('id', roleId)
-
-    if (!error) {
-      setRole({ ...role, title, description, category, compensation, work_setting: workSetting, hours_per_week: parseInt(hoursPerWeek) || null, is_active: isActive })
-      setIsEditing(false)
+    const finalAvatarUrl = overrideAvatarUrl !== undefined ? overrideAvatarUrl : avatarUrl
+    const finalAvatarSvg = overrideAvatarSvg !== undefined ? overrideAvatarSvg : avatarSvg
+    
+    const updatePayload = {
+      title,
+      description,
+      category,
+      compensation,
+      work_setting: workSetting,
+      hours_per_week: parseInt(hoursPerWeek) || null,
+      is_active: isActive,
+      avatar_svg: finalAvatarSvg,
+      avatar_url: finalAvatarUrl,
     }
+    console.log('[RoleSave] Updating role', roleId, 'with payload:', updatePayload)
+    
+    const { error, data, count } = await supabase
+      .from('opportunities')
+      .update(updatePayload)
+      .eq('id', roleId)
+      .select()
+    
+    console.log('[RoleSave] Result:', { error, data, count })
+
+    if (error) {
+      console.error('[RoleSave] Supabase error:', error)
+      setSaveError(`Save failed: ${error.message} (code: ${error.code})`)
+      setIsSaving(false)
+      return
+    }
+    
+    if (!data || data.length === 0) {
+      console.warn('[RoleSave] No rows updated — possible RLS policy issue. Check that company_id matches auth.uid().')
+      setSaveError('Save failed: No rows were updated. This is usually an RLS policy issue — make sure this role belongs to your account.')
+      setIsSaving(false)
+      return
+    }
+
+    setRole({ ...role, ...updatePayload })
+    setIsEditing(false)
     setIsSaving(false)
+    router.back()
   }
 
   const compensationLabel = (c: string) => {
@@ -165,13 +189,13 @@ export default function RoleDetailPage() {
                     <img
                       src={avatarUrl}
                       alt="Avatar"
-                      className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-cover bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm cursor-pointer hover:ring-2 hover:ring-brand-400 transition-all"
+                      className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl object-cover bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm transition-all ${isEditing ? 'cursor-pointer hover:ring-2 hover:ring-brand-400' : ''}`}
                       onClick={() => isEditing && setShowAvatarPicker(true)}
                       title={isEditing ? 'Click to change avatar' : ''}
                     />
                   ) : avatarSvg ? (
                     <div
-                      className="w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm cursor-pointer hover:ring-2 hover:ring-brand-400 transition-all"
+                      className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm transition-all ${isEditing ? 'cursor-pointer hover:ring-2 hover:ring-brand-400' : ''}`}
                       dangerouslySetInnerHTML={{ __html: avatarSvg }}
                       onClick={() => isEditing && setShowAvatarPicker(true)}
                       title={isEditing ? 'Click to change avatar' : ''}
@@ -220,11 +244,18 @@ export default function RoleDetailPage() {
                       ✏️ Edit Role Info
                     </Button>
                   ) : (
-                    <div className="flex gap-2 w-full sm:w-auto justify-end">
-                      <Button onClick={() => { setIsEditing(false); setShowAvatarPicker(false) }} variant="outline" className="rounded-xl">Cancel</Button>
-                      <Button onClick={handleSave} disabled={isSaving} className="rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-md">
-                        {isSaving ? 'Saving…' : '💾 Save Changes'}
-                      </Button>
+                    <div className="flex flex-col gap-2 w-full sm:w-auto">
+                      <div className="flex gap-2 justify-end">
+                        <Button onClick={() => { setIsEditing(false); setShowAvatarPicker(false); setSaveError(null) }} variant="outline" className="rounded-xl">Cancel</Button>
+                        <Button onClick={() => handleSave()} disabled={isSaving} className="rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-md">
+                          {isSaving ? 'Saving…' : '💾 Save Changes'}
+                        </Button>
+                      </div>
+                      {saveError && (
+                        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-xs font-semibold text-red-600 dark:text-red-400 animate-fade-in">
+                          ⚠️ {saveError}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -253,7 +284,7 @@ export default function RoleDetailPage() {
                           setAvatarUrl(previewAvatarUrl)
                           setAvatarSvg(null)
                           setPreviewAvatarUrl(null)
-                          setShowAvatarPicker(false) 
+                          setShowAvatarPicker(false)
                         }}
                         className="w-32 h-32 rounded-xl overflow-hidden border-2 border-brand-500 shadow-md hover:scale-105 transition-transform relative cursor-pointer group"
                       >
@@ -488,7 +519,7 @@ export default function RoleDetailPage() {
             {isEditing && (
               <div className="flex gap-2">
                 <Button onClick={() => setIsEditing(false)} variant="outline" className="rounded-xl">Cancel</Button>
-                <Button onClick={handleSave} disabled={isSaving} className="rounded-xl">
+                <Button onClick={() => handleSave()} disabled={isSaving} className="rounded-xl">
                   {isSaving ? 'Saving…' : '💾 Save Changes'}
                 </Button>
               </div>

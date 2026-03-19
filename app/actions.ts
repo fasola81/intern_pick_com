@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { unstable_noStore as noStore } from 'next/cache'
-import { generateRolePrep, moderateMessage, moderateOpportunityListing, polishAboutUs, lookupCompany, generateRoleAvatar, generateRoleImage } from '@/lib/gemini'
+import { generateRolePrep, moderateMessage, moderateOpportunityListing, polishAboutUs, lookupCompany, generateRoleAvatar, generateRoleImage, suggestSkillTags as aiSuggestSkillTags, reviewDOLCompliance as aiReviewDOLCompliance, moderatePracticumProgram as aiModeratePracticum, isEducatorEmailDomain } from '@/lib/gemini'
 
 // Helper: require authenticated user or throw
 async function requireAuth(supabase: any) {
@@ -52,6 +52,29 @@ export async function moderateOpportunityContent(data: {
   }
 
   return result
+}
+
+// ============================================
+// AI Suggest Skill Tags
+// ============================================
+export async function suggestSkillTagsAction(data: {
+  title: string
+  category: string
+  description: string
+}) {
+  const tags = await aiSuggestSkillTags(data)
+  return { success: true, tags }
+}
+
+// ============================================
+// AI DOL Compliance Review (Unpaid Roles)
+// ============================================
+export async function reviewDOLComplianceAction(data: {
+  title: string
+  category: string
+  description: string
+}) {
+  return await aiReviewDOLCompliance(data)
 }
 
 // ============================================
@@ -909,6 +932,55 @@ export async function addComment(data: {
   return { success: true }
 }
 
+export async function deleteComment(commentId: string, opportunityId: string) {
+  const supabase = await createClient()
+  let userId: string
+  try {
+    const auth = await requireAuth(supabase)
+    userId = auth.userId
+  } catch {
+    return { success: false, error: 'You must be logged in to delete a comment' }
+  }
+
+  // Check if user owns the comment OR is the employer who owns the opportunity
+  const { data: comment } = await supabase
+    .from('comments')
+    .select('user_id, opportunity_id')
+    .eq('id', commentId)
+    .single()
+
+  if (!comment) {
+    return { success: false, error: 'Comment not found' }
+  }
+
+  const { data: opp } = await supabase
+    .from('opportunities')
+    .select('company_id')
+    .eq('id', opportunityId)
+    .single()
+
+  const isOwner = comment.user_id === userId
+  const isEmployer = opp?.company_id === userId
+
+  if (!isOwner && !isEmployer) {
+    return { success: false, error: 'You do not have permission to delete this comment' }
+  }
+
+  // Delete the comment and its replies (cascade)
+  const { error } = await supabase
+    .from('comments')
+    .delete()
+    .eq('id', commentId)
+
+  if (error) {
+    console.error('[DB] delete comment error:', error)
+    return { success: false, error: error.message }
+  }
+
+  console.log('[DB] ✅ Comment deleted:', commentId)
+  return { success: true }
+}
+
 // ============================================
 // Shared Benefit Tags (Site-Wide)
 // ============================================
@@ -1233,4 +1305,789 @@ export async function getCandidateMessages(interestId: string) {
   }
 
   return { success: true, data: data || [] }
+}
+
+// ============================================
+// WBL PLATFORM — Educator, Employer & Student Actions
+// ============================================
+
+// Register as Educator
+export async function registerEducator(data: {
+  fullName: string
+  schoolName: string
+  district?: string
+  state?: string
+  title?: string
+}) {
+  const supabase = await createClient()
+  const { userId, email } = await requireAuth(supabase)
+
+  const emailDomain = email.split('@')[1]?.toLowerCase() || ''
+  const isVerified = isEducatorEmailDomain(email)
+
+  const { error: userError } = await supabase
+    .from('users')
+    .upsert({ id: userId, role: 'educator', full_name: data.fullName }, { onConflict: 'id' })
+
+  if (userError) {
+    console.error('[DB] upsert educator user error:', userError)
+    return { success: false, error: userError.message }
+  }
+
+  const { error } = await supabase
+    .from('educators')
+    .upsert({
+      id: userId,
+      full_name: data.fullName,
+      school_name: data.schoolName,
+      district: data.district || null,
+      state: data.state || null,
+      email_domain: emailDomain,
+      title: data.title || null,
+      is_verified: isVerified,
+    }, { onConflict: 'id' })
+
+  if (error) {
+    console.error('[DB] upsert educator profile error:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true, isVerified }
+}
+
+// Create Practicum Program (WBL)
+export async function createPracticumProgram(data: {
+  title: string
+  description: string
+  learningObjectives?: string
+  schoolName: string
+  district?: string
+  category?: string
+  termStartDate?: string
+  termEndDate?: string
+  hoursPerWeek?: number
+  requiredTotalHours?: number
+  schoolProvidesInsurance?: boolean
+}) {
+  const supabase = await createClient()
+  const { userId } = await requireAuth(supabase)
+
+  const { error, data: program } = await supabase
+    .from('practicum_programs')
+    .insert({
+      educator_id: userId,
+      title: data.title,
+      description: data.description,
+      learning_objectives: data.learningObjectives || null,
+      school_name: data.schoolName,
+      district: data.district || null,
+      category: data.category || null,
+      start_date: data.termStartDate || null,
+      end_date: data.termEndDate || null,
+      hours_per_week: data.hoursPerWeek || 10,
+      required_total_hours: data.requiredTotalHours || 120,
+      school_provides_insurance: data.schoolProvidesInsurance ?? false,
+      status: 'draft',
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('[DB] insert practicum program error:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true, program }
+}
+
+// Moderate & Publish Practicum Program (AI Review → seeking_hosts)
+export async function moderateAndPublishPracticumAction(programId: string) {
+  const supabase = await createClient()
+  const { userId } = await requireAuth(supabase)
+
+  const { data: program, error: fetchError } = await supabase
+    .from('practicum_programs')
+    .select('*')
+    .eq('id', programId)
+    .eq('educator_id', userId)
+    .single()
+
+  if (fetchError || !program) {
+    return { success: false, error: 'Program not found or access denied' }
+  }
+
+  // Run AI moderation
+  const review = await aiModeratePracticum({
+    title: program.title,
+    description: program.description,
+    schoolName: program.school_name,
+    category: program.category,
+  })
+
+  if (review.approved) {
+    await supabase
+      .from('practicum_programs')
+      .update({ status: 'seeking_hosts', ai_review_notes: null })
+      .eq('id', programId)
+
+    return { success: true, approved: true, review }
+  } else {
+    const notes = [
+      ...review.ferpaViolations.map(v => `[FERPA] ${v}`),
+      ...review.safetyIssues.map(s => `[SAFETY] ${s}`),
+      ...review.clarityIssues.map(c => `[CLARITY] ${c}`),
+    ].join('\n')
+
+    await supabase
+      .from('practicum_programs')
+      .update({ status: 'draft', ai_review_notes: notes })
+      .eq('id', programId)
+
+    return { success: true, approved: false, review }
+  }
+}
+
+// Get Educator's Own Programs
+export async function getMyPracticumPrograms() {
+  noStore()
+  const supabase = await createClient()
+  const { userId } = await requireAuth(supabase)
+
+  const { data, error } = await supabase
+    .from('practicum_programs')
+    .select('*')
+    .eq('educator_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('[DB] fetch educator programs error:', error)
+    return { success: false, data: [] }
+  }
+
+  return { success: true, data: data || [] }
+}
+
+// Get Programs Seeking Hosts (Employer browsing feed)
+export async function getProgramsSeekingHosts() {
+  noStore()
+  const supabase = await createClient()
+  await requireAuth(supabase)
+
+  const { data, error } = await supabase
+    .from('practicum_programs')
+    .select('*, educators(full_name, school_name, is_verified)')
+    .eq('status', 'seeking_hosts')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('[DB] fetch seeking-hosts programs error:', error)
+    return { success: false, data: [] }
+  }
+
+  return { success: true, data: data || [] }
+}
+
+// Submit Host Application (Employer applies to a Program)
+export async function submitHostApplication(data: {
+  practicumProgramId: string
+  proposedMentorName: string
+  proposedMentorEmail?: string
+  capacity?: number
+  mentorshipPlan: string
+}) {
+  const supabase = await createClient()
+  const { userId } = await requireAuth(supabase)
+
+  const { error } = await supabase
+    .from('host_applications')
+    .insert({
+      practicum_program_id: data.practicumProgramId,
+      employer_id: userId,
+      proposed_mentor_name: data.proposedMentorName,
+      proposed_mentor_email: data.proposedMentorEmail || null,
+      capacity: data.capacity || 1,
+      mentorship_plan: data.mentorshipPlan,
+      message_to_educator: data.mentorshipPlan, // Also used as message
+      status: 'pending',
+    })
+
+  if (error) {
+    console.error('[DB] insert host application error:', error)
+    if (error.code === '23505') {
+      return { success: false, error: 'You have already applied to this program.' }
+    }
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
+// Get Host Applications for a Program (Educator view)
+export async function getHostApplicationsForProgram(programId: string) {
+  noStore()
+  const supabase = await createClient()
+  await requireAuth(supabase)
+
+  const { data, error } = await supabase
+    .from('host_applications')
+    .select('*, companies(company_name, industry, website, city, state)')
+    .eq('practicum_program_id', programId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('[DB] fetch host applications error:', error)
+    return { success: false, data: [] }
+  }
+
+  return { success: true, data: data || [] }
+}
+
+// Update Host Application Status (Educator approves/rejects)
+export async function updateHostApplicationStatus(applicationId: string, status: 'approved_by_school' | 'rejected', notes?: string) {
+  const supabase = await createClient()
+  await requireAuth(supabase)
+
+  const { error } = await supabase
+    .from('host_applications')
+    .update({ status, educator_notes: notes || null })
+    .eq('id', applicationId)
+
+  if (error) {
+    console.error('[DB] update host application status error:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
+// Get Employer's Own Host Applications
+export async function getMyHostApplications() {
+  noStore()
+  const supabase = await createClient()
+  const { userId } = await requireAuth(supabase)
+
+  const { data, error } = await supabase
+    .from('host_applications')
+    .select('*, practicum_programs(title, school_name, status, start_date, end_date)')
+    .eq('employer_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('[DB] fetch my host applications error:', error)
+    return { success: false, data: [] }
+  }
+
+  return { success: true, data: data || [] }
+}
+
+// ============================================
+// PLACEMENTS — Educator assigns Student to Host
+// ============================================
+
+export async function createPlacement(data: {
+  studentId: string
+  hostApplicationId: string
+  practicumProgramId: string
+}) {
+  const supabase = await createClient()
+  const { userId } = await requireAuth(supabase)
+
+  // Verify educator owns the program
+  const { data: program } = await supabase
+    .from('practicum_programs')
+    .select('id')
+    .eq('id', data.practicumProgramId)
+    .eq('educator_id', userId)
+    .single()
+
+  if (!program) {
+    return { success: false, error: 'Access denied — you do not own this program.' }
+  }
+
+  const { error, data: placement } = await supabase
+    .from('placements')
+    .insert({
+      student_id: data.studentId,
+      host_application_id: data.hostApplicationId,
+      practicum_program_id: data.practicumProgramId,
+      educator_signed_at: new Date().toISOString(), // Auto-sign by educator
+      status: 'pending_signatures',
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('[DB] insert placement error:', error)
+    if (error.code === '23505') {
+      return { success: false, error: 'This student is already placed in this program.' }
+    }
+    return { success: false, error: error.message }
+  }
+
+  return { success: true, placement }
+}
+
+// Sign a Placement (Employer or Student)
+export async function signPlacement(placementId: string) {
+  const supabase = await createClient()
+  const { userId } = await requireAuth(supabase)
+
+  // Determine which role is signing
+  const { data: userRow } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .single()
+
+  if (!userRow) return { success: false, error: 'User not found' }
+
+  const now = new Date().toISOString()
+  const updateField = userRow.role === 'company' 
+    ? { employer_signed_at: now }
+    : userRow.role === 'student'
+    ? { student_signed_at: now }
+    : null
+
+  if (!updateField) return { success: false, error: 'Only employers and students can sign.' }
+
+  const { error } = await supabase
+    .from('placements')
+    .update(updateField)
+    .eq('id', placementId)
+
+  if (error) {
+    console.error('[DB] sign placement error:', error)
+    return { success: false, error: error.message }
+  }
+
+  // Check if all three have signed → activate
+  const { data: placement } = await supabase
+    .from('placements')
+    .select('educator_signed_at, employer_signed_at, student_signed_at')
+    .eq('id', placementId)
+    .single()
+
+  if (placement?.educator_signed_at && placement?.employer_signed_at && placement?.student_signed_at) {
+    await supabase
+      .from('placements')
+      .update({ status: 'active' })
+      .eq('id', placementId)
+  }
+
+  return { success: true }
+}
+
+// Get Placements for a Program (Educator view)
+export async function getPlacementsForProgram(programId: string) {
+  noStore()
+  const supabase = await createClient()
+  await requireAuth(supabase)
+
+  const { data, error } = await supabase
+    .from('placements')
+    .select('*, students(full_name:users(full_name)), host_applications(proposed_mentor_name, companies(company_name))')
+    .eq('practicum_program_id', programId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('[DB] fetch placements error:', error)
+    return { success: false, data: [] }
+  }
+
+  return { success: true, data: data || [] }
+}
+
+// ============================================
+// TIME LOGS — Student Timesheets
+// ============================================
+
+export async function submitTimeLog(data: {
+  placementId: string
+  logDate: string
+  hoursWorked: number
+  journalEntry?: string
+}) {
+  const supabase = await createClient()
+  const { userId } = await requireAuth(supabase)
+
+  const { error } = await supabase
+    .from('time_logs')
+    .insert({
+      placement_id: data.placementId,
+      student_id: userId,
+      log_date: data.logDate,
+      hours_worked: data.hoursWorked,
+      journal_entry: data.journalEntry || null,
+      status: 'pending_employer_approval',
+    })
+
+  if (error) {
+    console.error('[DB] insert time log error:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
+export async function getMyTimeLogs(placementId: string) {
+  noStore()
+  const supabase = await createClient()
+  const { userId } = await requireAuth(supabase)
+
+  const { data, error } = await supabase
+    .from('time_logs')
+    .select('*')
+    .eq('placement_id', placementId)
+    .eq('student_id', userId)
+    .order('log_date', { ascending: false })
+
+  if (error) {
+    console.error('[DB] fetch my time logs error:', error)
+    return { success: false, data: [] }
+  }
+
+  return { success: true, data: data || [] }
+}
+
+// Employer approves/rejects a timesheet entry
+export async function approveRejectTimeLog(timeLogId: string, status: 'approved' | 'rejected', notes?: string) {
+  const supabase = await createClient()
+  await requireAuth(supabase)
+
+  const { error } = await supabase
+    .from('time_logs')
+    .update({ status, employer_notes: notes || null })
+    .eq('id', timeLogId)
+
+  if (error) {
+    console.error('[DB] update time log status error:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
+// Get pending timesheets for employer's placements
+export async function getPendingTimesheetsForEmployer() {
+  noStore()
+  const supabase = await createClient()
+  const { userId } = await requireAuth(supabase)
+
+  // Get all placements linked to this employer's approved host applications
+  const { data: placements } = await supabase
+    .from('placements')
+    .select('id, host_applications!inner(employer_id)')
+    .eq('host_applications.employer_id', userId)
+    .eq('status', 'active')
+
+  if (!placements || placements.length === 0) {
+    return { success: true, data: [] }
+  }
+
+  const placementIds = placements.map(p => p.id)
+
+  const { data, error } = await supabase
+    .from('time_logs')
+    .select('*, placements(student_id, students:student_id(id)), users:student_id(full_name)')
+    .in('placement_id', placementIds)
+    .eq('status', 'pending_employer_approval')
+    .order('log_date', { ascending: false })
+
+  if (error) {
+    console.error('[DB] fetch pending timesheets error:', error)
+    return { success: false, data: [] }
+  }
+
+  return { success: true, data: data || [] }
+}
+
+// ============================================
+// EVALUATIONS — End-of-Term Grading
+// ============================================
+
+export async function submitEvaluation(data: {
+  placementId: string
+  rubricScores: Record<string, number>
+  comments?: string
+}) {
+  const supabase = await createClient()
+  const { userId } = await requireAuth(supabase)
+
+  const { error } = await supabase
+    .from('evaluations')
+    .upsert({
+      placement_id: data.placementId,
+      employer_id: userId,
+      rubric_scores: data.rubricScores,
+      comments: data.comments || null,
+      submitted_at: new Date().toISOString(),
+    }, { onConflict: 'placement_id' })
+
+  if (error) {
+    console.error('[DB] upsert evaluation error:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
+// ============================================
+// STUDENT INVITES — Walled Garden Entry
+// ============================================
+
+export async function generateStudentInvite(programId: string) {
+  const supabase = await createClient()
+  const { userId } = await requireAuth(supabase)
+
+  // Verify educator owns program
+  const { data: program } = await supabase
+    .from('practicum_programs')
+    .select('id, school_name')
+    .eq('id', programId)
+    .eq('educator_id', userId)
+    .single()
+
+  if (!program) return { success: false, error: 'Access denied' }
+
+  // Generate a unique invite code
+  const code = `${programId.slice(0, 4).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}-${Date.now().toString(36).slice(-3).toUpperCase()}`
+
+  return { success: true, inviteCode: code, inviteLink: `/join/${code}` }
+}
+
+export async function redeemStudentInvite(inviteCode: string, fullName: string) {
+  const supabase = await createClient()
+  const { userId } = await requireAuth(supabase)
+
+  // Create/update user as student
+  const { error: userError } = await supabase
+    .from('users')
+    .upsert({ id: userId, role: 'student', full_name: fullName }, { onConflict: 'id' })
+
+  if (userError) {
+    console.error('[DB] upsert student user error:', userError)
+    return { success: false, error: userError.message }
+  }
+
+  // Create student profile with invite code
+  const { error } = await supabase
+    .from('students')
+    .upsert({
+      id: userId,
+      high_school_name: 'Pending', // Will be updated from program context
+      invite_code: inviteCode,
+    }, { onConflict: 'id' })
+
+  if (error) {
+    console.error('[DB] upsert student profile error:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
+// ============================================
+// DASHBOARD DATA — Aggregated Views
+// ============================================
+
+// Educator: see all students' progress across a program
+export async function getEducatorDashboardData(programId: string) {
+  noStore()
+  const supabase = await createClient()
+  const { userId } = await requireAuth(supabase)
+
+  // Verify access
+  const { data: program } = await supabase
+    .from('practicum_programs')
+    .select('*, required_total_hours')
+    .eq('id', programId)
+    .eq('educator_id', userId)
+    .single()
+
+  if (!program) return { success: false, error: 'Access denied' }
+
+  // Get all placements with time log aggregation
+  const { data: placements, error } = await supabase
+    .from('placements')
+    .select(`
+      id, status, student_id, 
+      educator_signed_at, employer_signed_at, student_signed_at,
+      host_applications(proposed_mentor_name, companies(company_name)),
+      time_logs(id, hours_worked, status, log_date)
+    `)
+    .eq('practicum_program_id', programId)
+
+  if (error) {
+    console.error('[DB] fetch educator dashboard error:', error)
+    return { success: false, error: error.message }
+  }
+
+  // Get student names
+  const studentIds = (placements || []).map(p => p.student_id)
+  const { data: students } = await supabase
+    .from('users')
+    .select('id, full_name')
+    .in('id', studentIds)
+
+  const studentMap = new Map((students || []).map(s => [s.id, s.full_name]))
+
+  // Build dashboard rows
+  const rows = (placements || []).map(p => {
+    const logs = (p as any).time_logs || []
+    const approvedHours = logs
+      .filter((l: any) => l.status === 'approved')
+      .reduce((sum: number, l: any) => sum + parseFloat(l.hours_worked), 0)
+    const pendingLogs = logs.filter((l: any) => l.status === 'pending_employer_approval').length
+
+    return {
+      placementId: p.id,
+      studentId: p.student_id,
+      studentName: studentMap.get(p.student_id) || 'Unknown',
+      status: p.status,
+      companyName: (p as any).host_applications?.companies?.company_name || 'N/A',
+      mentorName: (p as any).host_applications?.proposed_mentor_name || 'N/A',
+      approvedHours,
+      requiredHours: program.required_total_hours || 120,
+      pendingTimesheets: pendingLogs,
+      allSigned: !!(p.educator_signed_at && p.employer_signed_at && p.student_signed_at),
+    }
+  })
+
+  return { success: true, program, rows }
+}
+
+// Student: get own progress
+export async function getStudentProgress() {
+  noStore()
+  const supabase = await createClient()
+  const { userId } = await requireAuth(supabase)
+
+  const { data: placements, error } = await supabase
+    .from('placements')
+    .select(`
+      id, status,
+      practicum_programs(title, school_name, required_total_hours, start_date, end_date),
+      host_applications(proposed_mentor_name, companies(company_name)),
+      time_logs(id, hours_worked, status, log_date, journal_entry)
+    `)
+    .eq('student_id', userId)
+
+  if (error) {
+    console.error('[DB] fetch student progress error:', error)
+    return { success: false, data: [] }
+  }
+
+  const progressData = (placements || []).map(p => {
+    const logs = (p as any).time_logs || []
+    const approvedHours = logs
+      .filter((l: any) => l.status === 'approved')
+      .reduce((sum: number, l: any) => sum + parseFloat(l.hours_worked), 0)
+    const requiredHours = (p as any).practicum_programs?.required_total_hours || 120
+
+    return {
+      placementId: p.id,
+      status: p.status,
+      programTitle: (p as any).practicum_programs?.title || 'Practicum',
+      schoolName: (p as any).practicum_programs?.school_name || '',
+      companyName: (p as any).host_applications?.companies?.company_name || '',
+      mentorName: (p as any).host_applications?.proposed_mentor_name || '',
+      approvedHours,
+      requiredHours,
+      progressPercent: Math.min(100, Math.round((approvedHours / requiredHours) * 100)),
+      recentLogs: logs.slice(0, 5),
+    }
+  })
+
+  return { success: true, data: progressData }
+}
+
+
+// ============================================
+// Student Profile Update
+// ============================================
+export async function updateStudentProfile(data: {
+  bio?: string
+  gradeLevel?: string
+  graduationYear?: number
+  careerInterests?: string[]
+}) {
+  const supabase = await createClient()
+  const { userId } = await requireAuth(supabase)
+
+  const { error } = await supabase
+    .from('students')
+    .update({
+      bio: data.bio || null,
+      grade_level: data.gradeLevel || null,
+      graduation_year: data.graduationYear || null,
+      career_interests: data.careerInterests || [],
+      profile_complete: !!(data.bio && data.gradeLevel),
+    })
+    .eq('id', userId)
+
+  if (error) {
+    console.error('[DB] update student profile error:', error)
+    return { success: false, error: error.message }
+  }
+  return { success: true }
+}
+
+// ============================================
+// Create Time Log Entry
+// ============================================
+export async function createTimeLog(data: {
+  placementId: string
+  logDate: string
+  hours: number
+  notes?: string
+}) {
+  const supabase = await createClient()
+  const { userId } = await requireAuth(supabase)
+
+  const { error, data: log } = await supabase
+    .from('time_logs')
+    .insert({
+      placement_id: data.placementId,
+      student_id: userId,
+      log_date: data.logDate,
+      hours: data.hours,
+      notes: data.notes || null,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('[DB] create time log error:', error)
+    return { success: false, error: error.message }
+  }
+  return { success: true, log }
+}
+
+// ============================================
+// Create Journal Entry
+// ============================================
+export async function createJournalEntry(data: {
+  placementId?: string
+  reflection: string
+  skillsLearned?: string
+}) {
+  const supabase = await createClient()
+  const { userId } = await requireAuth(supabase)
+
+  const { error, data: entry } = await supabase
+    .from('journal_entries')
+    .insert({
+      placement_id: data.placementId || null,
+      student_id: userId,
+      reflection: data.reflection,
+      skills_learned: data.skillsLearned || null,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('[DB] create journal entry error:', error)
+    return { success: false, error: error.message }
+  }
+  return { success: true, entry }
 }

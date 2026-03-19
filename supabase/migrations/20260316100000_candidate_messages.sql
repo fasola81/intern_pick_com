@@ -14,8 +14,10 @@ CREATE TABLE IF NOT EXISTS candidate_messages (
 
 ALTER TABLE candidate_messages ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "allow_insert_candidate_messages" ON candidate_messages;
 CREATE POLICY "allow_insert_candidate_messages" ON candidate_messages
   FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "allow_select_candidate_messages" ON candidate_messages;
 CREATE POLICY "allow_select_candidate_messages" ON candidate_messages
   FOR SELECT USING (true);

@@ -1,11 +1,11 @@
 "use client"
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { Navbar } from '@/components/Navbar'
 import { Button } from '@/components/ui/Button'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createOpportunity, polishCompanyAbout, moderateOpportunityContent, generateAndUploadRoleImageAction } from '@/app/actions'
+import { createOpportunity, polishCompanyAbout, moderateOpportunityContent, generateAndUploadRoleImageAction, suggestSkillTagsAction, reviewDOLComplianceAction } from '@/app/actions'
 import { STATE_MINIMUM_WAGES, FEDERAL_MINIMUM_WAGE, getMinimumWageByAbbr } from '@/lib/minimumWages'
 import { PREBUILT_AVATARS } from '@/lib/prebuilt-avatars'
 
@@ -24,11 +24,19 @@ export default function CreateRolePage() {
   const [isChecking, setIsChecking] = useState(false)
   const [showReview, setShowReview] = useState(false)
   const [moderationError, setModerationError] = useState<string | null>(null)
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(PREBUILT_AVATARS[0])
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [previewAvatarUrl, setPreviewAvatarUrl] = useState<string | null>(null)
   const [generationError, setGenerationError] = useState<string | null>(null)
   const [showFullPreviewModal, setShowFullPreviewModal] = useState<string | null>(null)
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false)
+  const [step, setStep] = useState(1)
+  const STEPS = [
+    { num: 1, title: 'Role Details', icon: '📋' },
+    { num: 2, title: 'Description', icon: '✍️' },
+    { num: 3, title: 'Skills & Perks', icon: '🎁' },
+    { num: 4, title: 'Avatar', icon: '🖼️' },
+    { num: 5, title: 'Requirements', icon: '📝' },
+  ]
   const [description, setDescription] = useState("")
   const [title, setTitle] = useState("")
   const [category, setCategory] = useState("")
@@ -49,6 +57,27 @@ export default function CreateRolePage() {
   const [perksSearch, setPerksSearch] = useState('')
   const [expandedCategory, setExpandedCategory] = useState<number | null>(0)
   const [customPerkInput, setCustomPerkInput] = useState('')
+  const [suggestedTags, setSuggestedTags] = useState<string[]>([])
+  const [isSuggestingTags, setIsSuggestingTags] = useState(false)
+  const [hasRequestedSuggestions, setHasRequestedSuggestions] = useState(false)
+  const [dolReview, setDolReview] = useState<{ compliant: boolean; score: number; issues: string[]; suggestions: string[] } | null>(null)
+  const [isReviewingDOL, setIsReviewingDOL] = useState(false)
+  const [dolReviewedDescription, setDolReviewedDescription] = useState('')
+  const [showValidation, setShowValidation] = useState(false)
+
+  // Auto-suggest skills when entering step 3 (Skills & Perks)
+  useEffect(() => {
+    if (step === 3 && title && !hasRequestedSuggestions) {
+      setHasRequestedSuggestions(true)
+      setIsSuggestingTags(true)
+      suggestSkillTagsAction({ title, category, description }).then(res => {
+        if (res.success && res.tags.length > 0) {
+          setSuggestedTags(res.tags)
+        }
+        setIsSuggestingTags(false)
+      }).catch(() => setIsSuggestingTags(false))
+    }
+  }, [step, title, category, description, hasRequestedSuggestions])
 
   const PERKS_CATEGORIES = [
     {
@@ -73,6 +102,23 @@ export default function CreateRolePage() {
     }
   ]
   
+  const CATEGORY_SKILLS: Record<string, string[]> = {
+    marketing: ['Social Media Marketing', 'Content Creation', 'Canva', 'Copywriting', 'SEO Basics', 'Email Marketing', 'Brand Awareness', 'Analytics'],
+    tech: ['HTML & CSS', 'JavaScript Basics', 'Git & GitHub', 'Problem Solving', 'Debugging', 'Data Analysis', 'AI & Prompt Engineering', 'Web Development'],
+    hospitality: ['Customer Service', 'POS Systems', 'Food Safety', 'Teamwork', 'Time Management', 'Cash Handling', 'Inventory Basics', 'Hospitality Skills'],
+    admin: ['Microsoft Office', 'Data Entry', 'Filing & Organization', 'Phone Etiquette', 'Scheduling', 'Email Communication', 'CRM Software', 'Detail Oriented'],
+    health: ['Patient Interaction', 'HIPAA Basics', 'Medical Terminology', 'Empathy', 'Record Keeping', 'First Aid Awareness', 'Hygiene Protocols', 'Communication'],
+    finance: ['Excel Spreadsheets', 'Data Entry', 'Basic Accounting', 'Attention to Detail', 'Financial Literacy', 'Invoicing', 'Math Skills', 'Organization'],
+    education: ['Tutoring', 'Lesson Planning', 'Public Speaking', 'Patience', 'Classroom Management', 'Student Engagement', 'Curriculum Basics', 'Mentoring'],
+    construction: ['Blueprint Reading', 'Tool Safety', 'Measurements', 'Physical Stamina', 'Teamwork', 'Problem Solving', 'Attention to Detail', 'Manual Dexterity'],
+    arts: ['Graphic Design', 'Photography', 'Video Editing', 'Color Theory', 'Adobe Creative Suite', 'Illustration', 'Visual Storytelling', 'Creative Thinking'],
+    other: ['Communication', 'Teamwork', 'Problem Solving', 'Time Management', 'Organization', 'Adaptability', 'Critical Thinking', 'Work Ethic'],
+  }
+
+  const categorySkills = useMemo(() => {
+    return CATEGORY_SKILLS[category] || CATEGORY_SKILLS['other']
+  }, [category])
+
   const availableTags = [
     "Social Media", "Communication", "Canva", "Excel", "Data Entry", 
     "Customer Service", "Writing", "SEO", "Project Management", "Detail Oriented",
@@ -129,7 +175,10 @@ export default function CreateRolePage() {
     if (!description.trim()) return
     setIsGenerating(true)
     try {
-      const result = await polishCompanyAbout({ text: description, companyName: title || 'Internship', industry: category || 'internship' })
+      const dolContext = compensation === 'unpaid'
+        ? '\n\n[IMPORTANT: This is an UNPAID internship. Under DOL Primary Beneficiary Test, the description MUST emphasize: what the intern will LEARN (skills, training, mentorship), how the experience ties to their education or career development, that the intern does NOT replace a paid employee, and the supervision/mentorship structure. Rewrite to ensure compliance.]'
+        : ''
+      const result = await polishCompanyAbout({ text: description + dolContext, companyName: title || 'Internship', industry: category || 'internship' })
       if (result.polished) {
         setDescription(result.polished)
       }
@@ -153,6 +202,9 @@ export default function CreateRolePage() {
 
   const handleCompensationChange = (val: 'paid' | 'unpaid' | 'credit') => {
     setCompensation(val)
+    // Clear DOL review when switching compensation type
+    setDolReview(null)
+    setDolReviewedDescription('')
     if (val === 'paid' && selectedState) {
       const stateData = getMinimumWageByAbbr(selectedState)
       if (stateData) {
@@ -245,11 +297,44 @@ export default function CreateRolePage() {
             <p className="text-lg text-slate-600 dark:text-slate-400">Match with the brightest high school talent in your community.</p>
           </section>
 
+          {/* Wizard Progress Bar */}
+          <section id="wizard-steps" className="animate-fade-in-up" style={{ animationDelay: '50ms' }}>
+            <div className="flex items-center justify-between relative">
+              {/* Connector line */}
+              <div className="absolute top-5 left-0 right-0 h-0.5 bg-slate-200 dark:bg-slate-800 z-0 mx-10" />
+              <div className="absolute top-5 left-0 h-0.5 bg-brand-500 z-0 mx-10 transition-all duration-500" style={{ width: `${((step - 1) / (STEPS.length - 1)) * (100 - 10)}%` }} />
+              {STEPS.map((s) => (
+                <button
+                  key={s.num}
+                  onClick={() => s.num < step && setStep(s.num)}
+                  className={`relative z-10 flex flex-col items-center gap-1.5 group ${s.num < step ? 'cursor-pointer' : s.num === step ? '' : 'cursor-default'}`}
+                >
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 border-2 ${
+                    s.num < step
+                      ? 'bg-brand-600 border-brand-600 text-white shadow-md shadow-brand-500/30'
+                      : s.num === step
+                        ? 'bg-white dark:bg-slate-900 border-brand-500 text-brand-600 dark:text-brand-400 shadow-md shadow-brand-500/20 scale-110'
+                        : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500'
+                  }`}>
+                    {s.num < step ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    ) : s.icon}
+                  </div>
+                  <span className={`text-[11px] font-bold transition-colors hidden sm:block ${
+                    s.num <= step ? 'text-brand-600 dark:text-brand-400' : 'text-slate-400 dark:text-slate-500'
+                  }`}>{s.title}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
           {/* Form Area */}
           <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden animate-fade-in-up" style={{ animationDelay: '100ms' }}>
             
             <div className="p-8 md:p-12 flex flex-col gap-10">
               
+              {/* ===== STEP 1: Role Details ===== */}
+              {step === 1 && (<div className="space-y-6 animate-fade-in-up">
               {/* Basic Info */}
               <div className="space-y-6">
                 <div>
@@ -265,12 +350,13 @@ export default function CreateRolePage() {
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="e.g. Marketing Assistant, Barista Trainee" 
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+                      className={`w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all ${showValidation && !title.trim() ? 'border-red-400 dark:border-red-500 ring-1 ring-red-300' : 'border-slate-200 dark:border-slate-700'}`}
                     />
+                    {showValidation && !title.trim() && <p className="text-xs text-red-500 font-medium mt-1">Please enter a role title</p>}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Category *</label>
-                    <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all appearance-none text-slate-900 dark:text-white">
+                    <select value={category} onChange={(e) => setCategory(e.target.value)} className={`w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all appearance-none text-slate-900 dark:text-white ${showValidation && !category ? 'border-red-400 dark:border-red-500 ring-1 ring-red-300' : 'border-slate-200 dark:border-slate-700'}`}>
                       <option value="">Select a category</option>
                       <option value="marketing">Marketing & Social Media</option>
                       <option value="tech">Technology & IT</option>
@@ -283,12 +369,13 @@ export default function CreateRolePage() {
                       <option value="arts">Arts & Design</option>
                       <option value="other">Other</option>
                     </select>
+                    {showValidation && !category && <p className="text-xs text-red-500 font-medium mt-1">Please select a category</p>}
                   </div>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Compensation *</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Role Type *</label>
                     <select value={compensation} onChange={(e) => handleCompensationChange(e.target.value as 'paid' | 'unpaid' | 'credit')} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all appearance-none text-slate-900 dark:text-white">
                       <option value="paid">💰 Paid (Hourly)</option>
                       <option value="unpaid">🎓 Unpaid (Experience)</option>
@@ -300,13 +387,14 @@ export default function CreateRolePage() {
                     <select
                       value={selectedState}
                       onChange={(e) => handleStateChange(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all appearance-none text-slate-900 dark:text-white"
+                      className={`w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all appearance-none text-slate-900 dark:text-white ${showValidation && !selectedState ? 'border-red-400 dark:border-red-500 ring-1 ring-red-300' : 'border-slate-200 dark:border-slate-700'}`}
                     >
                       <option value="">Select your state</option>
                       {STATE_MINIMUM_WAGES.map(s => (
                         <option key={s.abbr} value={s.abbr}>{s.state}</option>
                       ))}
                     </select>
+                    {showValidation && !selectedState && <p className="text-xs text-red-500 font-medium mt-1">Please select a state</p>}
                   </div>
                 </div>
 
@@ -322,8 +410,9 @@ export default function CreateRolePage() {
                         value={hourlyRate}
                         onChange={(e) => setHourlyRate(e.target.value)}
                         placeholder={`e.g. ${stateMinWage?.rate.toFixed(2) || FEDERAL_MINIMUM_WAGE.toFixed(2)}`}
-                        className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all text-slate-900 dark:text-white"
+                        className={`w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all text-slate-900 dark:text-white ${showValidation && !hourlyRate ? 'border-red-400 dark:border-red-500 ring-1 ring-red-300' : 'border-slate-200 dark:border-slate-700'}`}
                       />
+                      {showValidation && !hourlyRate && <p className="text-xs text-red-500 font-medium mt-1">Please enter an hourly rate</p>}
                       {stateMinWage && (
                         <p className="text-xs text-slate-500 dark:text-slate-400">
                           {stateMinWage.state} minimum wage: <strong className="text-slate-700 dark:text-slate-300">${stateMinWage.rate.toFixed(2)}/hr</strong>
@@ -361,6 +450,11 @@ export default function CreateRolePage() {
                         <option value="12">12 Months</option>
                         <option value="ongoing">Ongoing</option>
                       </select>
+                      {hourlyRate && hoursPerWeek && duration && duration !== 'ongoing' && (
+                        <p className="text-xs font-bold text-brand-700 dark:text-brand-300 text-right">
+                          💰 Est. Budget: ${(parseFloat(hourlyRate) * parseFloat(hoursPerWeek) * 4.33 * parseFloat(duration)).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -399,30 +493,8 @@ export default function CreateRolePage() {
                   </div>
                 )}
 
-                {/* Unpaid DOL Warning */}
-                {compensation === 'unpaid' && (
-                  <div className="mt-4 p-5 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30">
-                    <div className="flex gap-3">
-                      <span className="text-xl flex-shrink-0">⚠️</span>
-                      <div>
-                        <p className="text-sm font-bold text-amber-800 dark:text-amber-300 mb-2">DOL Compliance Required for Unpaid Internships</p>
-                        <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed mb-3">
-                          Under the Department of Labor&apos;s <strong>Primary Beneficiary Test</strong>, unpaid internships at for-profit businesses must primarily benefit the intern. Your role description should emphasize:
-                        </p>
-                        <ul className="text-xs text-amber-700 dark:text-amber-400 space-y-1.5 mb-3">
-                          <li className="flex gap-2"><span className="font-bold">•</span>What the intern will <strong>learn</strong> (skills, training, mentorship)</li>
-                          <li className="flex gap-2"><span className="font-bold">•</span>How the experience ties to their <strong>education or career development</strong></li>
-                          <li className="flex gap-2"><span className="font-bold">•</span>That the intern <strong>does not replace</strong> a paid employee&apos;s duties</li>
-                          <li className="flex gap-2"><span className="font-bold">•</span>Supervision and <strong>mentorship structure</strong></li>
-                        </ul>
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs text-amber-600 dark:text-amber-500 font-medium">🤖 Our AI will review your description for compliance before publishing.</span>
-                          <a href="/internship-rules" target="_blank" className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline whitespace-nowrap">Learn more →</a>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+
+
 
                 <div className="space-y-2 pt-2">
                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Work Setting *</label>
@@ -461,9 +533,10 @@ export default function CreateRolePage() {
                 </div>
 
               </div>
+              </div>)}
 
-              <div className="h-px bg-slate-200 dark:bg-slate-800 w-full"></div>
-
+              {/* ===== STEP 4: Role Avatar ===== */}
+              {step === 4 && (<div className="animate-fade-in-up">
               {/* Role Avatar */}
               <div className="space-y-6 relative">
                 <div className="flex justify-between items-end">
@@ -529,7 +602,7 @@ export default function CreateRolePage() {
                 </div>
                 
                 {/* Prebuilt Grid & Selection Preview */}
-                <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3 max-h-60 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 custom-scrollbar relative">
+                <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
                   {PREBUILT_AVATARS.map((url, i) => (
                     <div key={i} className="relative aspect-square rounded-xl overflow-visible group">
                       <button
@@ -548,20 +621,14 @@ export default function CreateRolePage() {
                           </div>
                         )}
                       </button>
-                      {/* Hover Preview Tooltip */}
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-32 h-32 rounded-xl overflow-hidden shadow-2xl border-2 border-brand-400 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-[100] bg-white hidden sm:block delay-100">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt="Large preview" className="w-full h-full object-cover" />
-                        <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[10px] text-center font-bold py-1">Click to Select</div>
-                      </div>
                       
-                      {/* Enlarge Modal Button */}
+                      {/* Enlarge Modal Button — always visible */}
                       <button 
                         onClick={(e) => { e.stopPropagation(); setShowFullPreviewModal(url) }}
-                        className="absolute bottom-1 right-1 w-6 h-6 bg-slate-900/60 hover:bg-slate-900 backdrop-blur text-white rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                        className="absolute bottom-1 right-1 w-7 h-7 bg-slate-900/70 hover:bg-brand-600 backdrop-blur text-white rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-20"
                         title="View Full Size"
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
                       </button>
                     </div>
                   ))}
@@ -584,9 +651,10 @@ export default function CreateRolePage() {
                   {isGeneratingAvatar ? "Generating..." : "✨ Generate with AI"}
                 </button>
               </div>
+              </div>)}
 
-              <div className="h-px bg-slate-200 dark:bg-slate-800 w-full"></div>
-
+              {/* ===== STEP 2: Description ===== */}
+              {step === 2 && (<div className="animate-fade-in-up">
               {/* Description & AI */}
               <div className="space-y-6">
                 <div className="flex justify-between items-end">
@@ -617,8 +685,9 @@ export default function CreateRolePage() {
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="What will the intern do? What skills will they develop?" 
                   rows={6}
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all resize-y"
+                  className={`w-full px-4 py-3 rounded-2xl border bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all resize-y ${showValidation && !description.trim() ? 'border-red-400 dark:border-red-500 ring-1 ring-red-300' : 'border-slate-200 dark:border-slate-700'}`}
                 ></textarea>
+                {showValidation && !description.trim() && <p className="text-xs text-red-500 font-medium -mt-4">Please enter a role description to continue</p>}
                 
                 {/* Mobile only AI button */}
                 <button 
@@ -628,9 +697,213 @@ export default function CreateRolePage() {
                 >
                   {isGenerating ? "Polishing..." : "✨ Polish with AI"}
                 </button>
+
+                {/* DOL Compliance Notice (unpaid only) */}
+                {compensation === 'unpaid' && (
+                  <div className="p-5 rounded-2xl bg-amber-50/80 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/40 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">⚠️</span>
+                      <h3 className="font-bold text-amber-900 dark:text-amber-200 text-sm">DOL Compliance Required for Unpaid Internships</h3>
+                    </div>
+                    <p className="text-xs text-amber-800/80 dark:text-amber-300/80 leading-relaxed">
+                      Under the Department of Labor&apos;s Primary Beneficiary Test, unpaid internships at for-profit businesses must primarily benefit the intern. Your role description should emphasize:
+                    </p>
+                    <ul className="space-y-1.5 text-xs text-amber-800/80 dark:text-amber-300/80">
+                      <li className="flex items-start gap-2">
+                        <span className="mt-0.5">•</span>
+                        <span>What the intern will <strong className="text-amber-900 dark:text-amber-200">learn</strong> (skills, training, mentorship)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="mt-0.5">•</span>
+                        <span>How the experience ties to their <strong className="text-amber-900 dark:text-amber-200">education or career development</strong></span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="mt-0.5">•</span>
+                        <span>That the intern <strong className="text-amber-900 dark:text-amber-200">does not replace</strong> a paid employee&apos;s duties</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="mt-0.5">•</span>
+                        <span>Supervision and <strong className="text-amber-900 dark:text-amber-200">mentorship structure</strong></span>
+                      </li>
+                    </ul>
+                    <p className="text-[11px] text-amber-700/70 dark:text-amber-400/60 flex items-center gap-1.5">
+                      🤖 Our AI will review your description for compliance when you press Next.
+                      <a href="/internship-rules" target="_blank" className="underline hover:text-amber-900 dark:hover:text-amber-300 transition-colors">Learn more →</a>
+                    </p>
+                  </div>
+                )}
+
+                {/* DOL Compliance Review Results */}
+                {compensation === 'unpaid' && dolReview && !dolReview.compliant && (
+                  <div className="p-5 rounded-2xl bg-red-50/80 dark:bg-red-900/10 border border-red-200 dark:border-red-800/40 space-y-4 animate-fade-in-up">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🚫</span>
+                      <h3 className="font-bold text-red-900 dark:text-red-200 text-sm">DOL Compliance Review — Changes Needed</h3>
+                    </div>
+                    <div className="flex items-center gap-3 mb-1">
+                      <div className="flex-grow h-2 rounded-full bg-red-200 dark:bg-red-900/30 overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${dolReview.score}%`, backgroundColor: dolReview.score >= 60 ? '#22c55e' : dolReview.score >= 35 ? '#f59e0b' : '#ef4444' }} />
+                      </div>
+                      <span className="text-xs font-bold text-red-700 dark:text-red-300 whitespace-nowrap">{dolReview.score}/100</span>
+                    </div>
+                    {dolReview.issues.length > 0 && (
+                      <div>
+                        <p className="text-xs font-bold text-red-800 dark:text-red-300 mb-1.5">Issues found:</p>
+                        <ul className="space-y-1">
+                          {dolReview.issues.map((issue, i) => (
+                            <li key={i} className="flex items-start gap-2 text-xs text-red-700 dark:text-red-400">
+                              <span className="flex-shrink-0 mt-0.5">✕</span>
+                              <span>{issue}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {dolReview.suggestions.length > 0 && (
+                      <div>
+                        <p className="text-xs font-bold text-green-800 dark:text-green-300 mb-1.5">How to fix it:</p>
+                        <ul className="space-y-1">
+                          {dolReview.suggestions.map((sug, i) => (
+                            <li key={i} className="flex items-start gap-2 text-xs text-green-700 dark:text-green-400">
+                              <span className="flex-shrink-0 mt-0.5">💡</span>
+                              <span>{sug}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    <p className="text-[11px] text-red-600/70 dark:text-red-400/60">
+                      Please update your description to address the issues above, then press Next again to re-check.
+                    </p>
+                  </div>
+                )}
+              </div>
+              </div>)}
+
+              {/* ===== STEP 3: Skills & Perks ===== */}
+              {step === 3 && (<div className="animate-fade-in-up">
+
+              {/* Skills You'll Learn */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-end">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Skills You&apos;ll Learn</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Select or add skills the intern will develop during this role.</p>
+                  </div>
+                  {isSuggestingTags && (
+                    <span className="flex items-center gap-2 text-xs font-bold text-brand-600 dark:text-brand-400">
+                      <span className="w-3.5 h-3.5 rounded-full border-2 border-brand-500 border-t-transparent animate-spin"></span>
+                      AI suggesting skills…
+                    </span>
+                  )}
+                </div>
+
+                {/* Selected skills */}
+                {selectedTags.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-wider">✓ Selected ({selectedTags.length})</span>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTags.map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-brand-50 border border-brand-200 text-brand-700 dark:bg-brand-900/30 dark:border-brand-700/50 dark:text-brand-300 hover:bg-red-50 hover:border-red-200 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:border-red-700/50 dark:hover:text-red-400 transition-all group"
+                        >
+                          {tag}
+                          <svg className="w-3 h-3 opacity-50 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* AI Suggested Tags */}
+                {suggestedTags.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-brand-600 dark:text-brand-400 flex items-center gap-1">✨ AI Suggestions based on your role</span>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestedTags.filter(t => !selectedTags.includes(t)).map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => setSelectedTags(prev => [...prev, tag])}
+                          className="px-3.5 py-2 rounded-xl text-sm font-bold border transition-all bg-brand-50/50 border-brand-200 text-brand-700 hover:bg-brand-100 dark:bg-brand-900/20 dark:border-brand-700/40 dark:text-brand-300 dark:hover:bg-brand-900/40"
+                        >
+                          + {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Category-based default skills */}
+                <div className="space-y-2">
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">🎯 Suggested for {category || 'this role'}</span>
+                  <div className="flex flex-wrap gap-2">
+                    {categorySkills.filter(t => !selectedTags.includes(t) && !suggestedTags.includes(t)).map(tag => (
+                      <button
+                        key={tag}
+                        onClick={() => setSelectedTags(prev => [...prev, tag])}
+                        className="px-3.5 py-2 rounded-xl text-sm font-bold border transition-all bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+                      >
+                        + {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Other preset skill tags */}
+                {availableTags.filter(t => !suggestedTags.includes(t) && !categorySkills.includes(t) && !selectedTags.includes(t)).length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">More Skills</span>
+                    <div className="flex flex-wrap gap-2">
+                      {availableTags.filter(t => !suggestedTags.includes(t) && !categorySkills.includes(t) && !selectedTags.includes(t)).map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => toggleTag(tag)}
+                          className="px-3.5 py-2 rounded-xl text-sm font-bold border transition-all bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 hover:border-slate-300"
+                        >
+                          + {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Custom skill tags */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Add a custom skill and press Enter"
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        const val = (e.target as HTMLInputElement).value.trim()
+                        if (val && !selectedTags.includes(val)) {
+                          setSelectedTags(prev => [...prev, val])
+                        }
+                        ;(e.target as HTMLInputElement).value = ''
+                      }
+                    }}
+                  />
+                </div>
+                {/* Selected custom tags (those not in availableTags) */}
+                {selectedTags.filter(t => !availableTags.includes(t)).length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTags.filter(t => !availableTags.includes(t)).map(tag => (
+                      <button
+                        key={tag}
+                        onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-brand-50 border border-brand-200 text-brand-700 dark:bg-brand-900/30 dark:border-brand-700/50 dark:text-brand-300 hover:bg-red-50 hover:border-red-200 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:border-red-700/50 dark:hover:text-red-400 transition-all group"
+                      >
+                        {tag}
+                        <svg className="w-3 h-3 opacity-50 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div className="h-px bg-slate-200 dark:bg-slate-800 w-full"></div>
+              <div className="h-px bg-slate-200 dark:bg-slate-800 w-full my-6"></div>
 
               {/* Perks to Intern */}
               <div className="space-y-5">
@@ -814,11 +1087,12 @@ export default function CreateRolePage() {
                   <p className="text-xs text-slate-400 dark:text-slate-500">Separate multiple items with commas, then press Enter or click Add.</p>
                 </div>
               </div>
+              </div>)}
 
-              <div className="h-px bg-slate-200 dark:bg-slate-800 w-full"></div>
-
+              {/* ===== STEP 5: Requirements ===== */}
+              {step === 5 && (<div className="animate-fade-in-up">
               {/* Pre-Screening Questions */}
-              <div className="space-y-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+              <div className="space-y-6">
                 <div>
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Application Requirements</h2>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Set eligibility criteria, request a video, or add screening questions for applicants.</p>
@@ -975,32 +1249,137 @@ export default function CreateRolePage() {
                   )}
                 </div>
               </div>
+              </div>)}
 
             </div>
 
-            {/* Footer Actions */}
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-6 md:p-8 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-end gap-4">
-              <Link href="/employer" className="w-full sm:w-auto">
-                <Button variant="outline" className="w-full rounded-xl bg-white dark:bg-slate-900 border-slate-200 hover:border-slate-300 dark:border-slate-700">Cancel</Button>
-              </Link>
-              <Button 
-                onClick={handleReviewClick}
-                disabled={isChecking || isPublishing || !title}
-                className="w-full sm:w-auto rounded-xl shadow-brand-500/20 px-8 disabled:opacity-70 disabled:cursor-wait"
-              >
-                {isChecking || isGeneratingAvatar ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></span>
-                    {isGeneratingAvatar ? '✨ Creating avatar…' : 'Checking…'}
-                  </span>
-                ) : 'Review & Publish'}
-              </Button>
+            {/* Wizard Navigation Footer */}
+            <div className="bg-slate-50 dark:bg-slate-900/50 p-6 md:p-8 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between gap-4">
+              <div>
+                {step === 1 ? (
+                  <Link href="/employer" className="w-full sm:w-auto">
+                    <Button variant="outline" className="w-full rounded-xl bg-white dark:bg-slate-900 border-slate-200 hover:border-slate-300 dark:border-slate-700">Cancel</Button>
+                  </Link>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => { setStep(step - 1); document.getElementById('wizard-steps')?.scrollIntoView({ behavior: 'smooth' }) }}
+                    className="w-full sm:w-auto rounded-xl bg-white dark:bg-slate-900 border-slate-200 hover:border-slate-300 dark:border-slate-700"
+                  >
+                    ← Back
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-slate-400 dark:text-slate-500 hidden sm:block">Step {step} of {STEPS.length}</span>
+                {step < 5 ? (
+                  <Button 
+                    onClick={async () => {
+                      // Validate required fields per step
+                      if (step === 1) {
+                        const missing = !title.trim() || !category || !selectedState || (compensation === 'paid' && !hourlyRate)
+                        if (missing) {
+                          setShowValidation(true)
+                          return
+                        }
+                      }
+                      if (step === 2) {
+                        if (!description.trim()) {
+                          setShowValidation(true)
+                          return
+                        }
+                        // DOL compliance gate for unpaid roles
+                        if (compensation === 'unpaid') {
+                          if (dolReviewedDescription !== description.trim()) {
+                            setIsReviewingDOL(true)
+                            setDolReview(null)
+                            try {
+                              const result = await reviewDOLComplianceAction({ title, category, description: description.trim() })
+                              setDolReview(result)
+                              setDolReviewedDescription(description.trim())
+                              if (!result.compliant) {
+                                setIsReviewingDOL(false)
+                                return
+                              }
+                            } catch {
+                              // Fail open if AI is down
+                            }
+                            setIsReviewingDOL(false)
+                          } else if (dolReview && !dolReview.compliant) {
+                            return
+                          }
+                        }
+                      }
+                      setShowValidation(false)
+                      setStep(step + 1)
+                      document.getElementById('wizard-steps')?.scrollIntoView({ behavior: 'smooth' })
+                    }}
+                    disabled={isReviewingDOL}
+                    className="w-full sm:w-auto rounded-xl shadow-brand-500/20 px-8 disabled:opacity-70"
+                  >
+                    {isReviewingDOL ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></span>
+                        Reviewing Compliance...
+                      </span>
+                    ) : (
+                      'Next →'
+                    )}
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={handleReviewClick}
+                    disabled={isChecking || isPublishing || !title}
+                    className="w-full sm:w-auto rounded-xl shadow-brand-500/20 px-8 disabled:opacity-70 disabled:cursor-wait"
+                  >
+                    {isChecking ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></span>
+                        Checking…
+                      </span>
+                    ) : 'Review & Publish →'}
+                  </Button>
+                )}
+              </div>
             </div>
             
           </section>
 
         </div>
       </main>
+      {/* ======== Full Preview Modal ======== */}
+      {showFullPreviewModal && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in" 
+          onClick={() => setShowFullPreviewModal(null)}
+        >
+          <div 
+            className="relative max-w-lg w-full animate-scale-up"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img 
+              src={showFullPreviewModal} 
+              alt="Avatar Preview" 
+              className="w-full rounded-2xl shadow-2xl border border-white/10"
+            />
+            <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-b-2xl flex items-center justify-between">
+              <button
+                onClick={() => { setAvatarUrl(showFullPreviewModal); setShowFullPreviewModal(null) }}
+                className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-xl transition-colors shadow-lg"
+              >
+                ✓ Select This Avatar
+              </button>
+              <button
+                onClick={() => setShowFullPreviewModal(null)}
+                className="px-4 py-2.5 bg-white/20 hover:bg-white/30 backdrop-blur text-white text-sm font-bold rounded-xl transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ======== Safety Flagged Modal ======== */}
       {moderationError && (
@@ -1093,7 +1472,7 @@ export default function CreateRolePage() {
               {/* Skills */}
               {selectedTags.length > 0 && (
                 <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-800">
-                  <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Required Skills</h3>
+                  <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Skills You&apos;ll Learn</h3>
                   <div className="flex flex-wrap gap-2">
                     {selectedTags.map(tag => (
                       <span key={tag} className="px-3 py-1.5 rounded-full bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300 text-sm font-medium">{tag}</span>

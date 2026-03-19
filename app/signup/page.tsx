@@ -1,19 +1,29 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Navbar } from '@/components/Navbar'
 import { Button } from '@/components/ui/Button'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 
 export default function SignupPage() {
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [role, setRole] = useState<'student' | 'employer'>('student')
+  const [role, setRole] = useState<'student' | 'employer' | 'educator'>('student')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+
+  // Auto-select role from URL param
+  useEffect(() => {
+    const urlRole = searchParams.get('role')
+    if (urlRole === 'employer' || urlRole === 'educator' || urlRole === 'student') {
+      setRole(urlRole)
+    }
+  }, [searchParams])
 
   const passwordStrength = (() => {
     if (password.length === 0) return { label: '', color: '', width: '0%' }
@@ -37,6 +47,18 @@ export default function SignupPage() {
       return
     }
 
+    // TODO: Re-enable educator email validation before production launch
+    // if (role === 'educator') {
+    //   const emailDomain = email.split('@')[1]?.toLowerCase() || ''
+    //   const isSchoolEmail = emailDomain.endsWith('.edu') ||
+    //     /\.k12\.[a-z]{2}\.us$/.test(emailDomain) ||
+    //     emailDomain.endsWith('.org')
+    //   if (!isSchoolEmail) {
+    //     setError('School accounts require a .edu, .k12.[state].us, or .org email address to verify your educator status.')
+    //     return
+    //   }
+    // }
+
     setIsLoading(true)
 
     const supabase = createClient()
@@ -45,7 +67,7 @@ export default function SignupPage() {
       password,
       options: {
         data: { role },
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${role === 'employer' ? '/onboarding/employer' : '/onboarding/student'}`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${role === 'employer' ? '/onboarding/employer' : role === 'educator' ? '/onboarding/educator' : '/onboarding/student'}`,
       },
     })
 
@@ -100,11 +122,11 @@ export default function SignupPage() {
             
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-brand-100 dark:bg-brand-900/30 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-brand-200 dark:border-brand-800/50">
+              <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-emerald-200 dark:border-emerald-800/50">
                 🚀
               </div>
               <h1 className="text-2xl font-black text-slate-900 dark:text-white">Create Your Account</h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-2">Join InternPick and start matching today</p>
+              <p className="text-slate-500 dark:text-slate-400 mt-2">Join InternPick — School-Credit Practicums</p>
             </div>
 
             {/* Error */}
@@ -119,7 +141,7 @@ export default function SignupPage() {
               {/* Role Toggle */}
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700 dark:text-slate-300">I am a...</label>
-                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                <div className="grid grid-cols-3 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
                   <button
                     type="button"
                     onClick={() => setRole('student')}
@@ -136,13 +158,27 @@ export default function SignupPage() {
                     onClick={() => setRole('employer')}
                     className={`py-2.5 rounded-lg text-sm font-bold transition-all ${
                       role === 'employer'
-                        ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm'
+                        ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
                         : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
                     }`}
                   >
                     🏢 Business
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole('educator')}
+                    className={`py-2.5 rounded-lg text-sm font-bold transition-all ${
+                      role === 'educator'
+                        ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
+                    }`}
+                  >
+                    🏫 School
+                  </button>
                 </div>
+                {role === 'educator' && (
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">For CTE coordinators, teachers, and counselors</p>
+                )}
               </div>
 
               {/* Email */}

@@ -23,7 +23,7 @@ export function Footer() {
               </span>
             </Link>
             <p className="text-slate-400 leading-relaxed max-w-sm">
-              The premier platform connecting ambitious high school students with local businesses in their community.
+              The platform connecting schools, students, and local businesses for school-sponsored work-based learning and academic-credit practicums.
             </p>
             <div className="pt-4 flex items-center gap-3 text-slate-400">
               <span className="text-sm font-medium">Powered by</span>
@@ -49,13 +49,18 @@ export function Footer() {
             <h3 className="text-sm font-bold uppercase tracking-wider text-white">Platform</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/login?role=student" className="text-slate-400 hover:text-brand-400 transition-colors">
+                <Link href="/signup?role=student" className="text-slate-400 hover:text-brand-400 transition-colors">
                   For Students
                 </Link>
               </li>
               <li>
-                <Link href="/login?role=employer" className="text-slate-400 hover:text-brand-400 transition-colors">
+                <Link href="/signup?role=employer" className="text-slate-400 hover:text-brand-400 transition-colors">
                   For Businesses
+                </Link>
+              </li>
+              <li>
+                <Link href="/signup?role=educator" className="text-slate-400 hover:text-emerald-400 transition-colors">
+                  For Schools
                 </Link>
               </li>
               <li>
@@ -82,7 +87,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/internship-rules" className="text-slate-400 hover:text-brand-400 transition-colors">
-                  Internship Wiki
+                  WBL Resources
                 </Link>
               </li>
               <li>
@@ -97,7 +102,7 @@ export function Footer() {
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-400">
-          <p>© {currentYear} InternPick.com. Empowering young careers.</p>
+          <p>© {currentYear} InternPick.com. School-credit work-based learning.</p>
           <div className="flex flex-wrap justify-center md:justify-end items-center gap-4 md:gap-6">
             <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
             <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>

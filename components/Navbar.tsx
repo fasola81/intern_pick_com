@@ -27,6 +27,11 @@ export function Navbar() {
       setIsLoading(false)
     }
     getUser()
+    
+    // Close mobile menu and dropdowns instantly on any navigation
+    setShowMobileMenu(false)
+    setShowDropdown(false)
+    setShowNotifications(false)
   }, [pathname])
 
   // Close dropdowns on click outside
@@ -53,8 +58,8 @@ export function Navbar() {
   }
 
   const userRole = user?.user_metadata?.role || 'student'
-  const dashboardPath = userRole === 'employer' ? '/employer' : '/student'
-  const settingsPath = userRole === 'employer' ? '/employer/account' : '/student'
+  const dashboardPath = userRole === 'employer' ? '/employer' : userRole === 'educator' ? '/educator' : '/student'
+  const settingsPath = userRole === 'employer' ? '/employer/account' : userRole === 'educator' ? '/educator' : '/student'
   const userInitial = user?.email?.[0]?.toUpperCase() || '?'
 
   // Notification items — will be dynamic in the future
@@ -64,13 +69,27 @@ export function Navbar() {
 
   const employerTabs = [
     { href: '/employer', label: 'Dashboard', exact: true },
-    { href: '/employer/roles', label: 'Roles' },
-    { href: '/employer/search', label: 'Search' },
-    { href: '/employer/candidates', label: 'Candidates' },
-    { href: '/employer/interns', label: 'My Interns' },
+    { href: '/employer/programs', label: 'Programs' },
+    { href: '/employer/placements', label: 'Placements' },
+    { href: '/employer/account', label: 'Settings' },
+  ]
+
+  const studentTabs = [
+    { href: '/student', label: 'Dashboard', exact: true },
+    { href: '/student/profile', label: 'Profile' },
+    { href: '/student/log-hours', label: 'Log Hours' },
+    { href: '/student/journal', label: 'Journal' },
+  ]
+
+  const educatorTabs = [
+    { href: '/educator', label: 'Dashboard', exact: true },
+    { href: '/educator/create-program', label: 'Create Program' },
+    { href: '/educator/students', label: 'Students' },
+    { href: '/educator/progress', label: 'Progress' },
   ]
 
   const isEmployer = user && userRole === 'employer'
+  const isEducator = user && userRole === 'educator'
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
@@ -98,7 +117,29 @@ export function Navbar() {
             </span>
           </Link>
           <div className="hidden lg:flex items-center gap-1">
-            {isEmployer && pathname.startsWith('/employer') ? (
+            {isEducator && pathname.startsWith('/educator') ? (
+              <div className="flex bg-slate-100/80 dark:bg-slate-800/60 p-1 rounded-full border border-slate-200/50 dark:border-slate-700/40">
+                {educatorTabs.map((tab) => {
+                  const isActive = tab.exact
+                    ? pathname === tab.href
+                    : pathname.startsWith(tab.href)
+                  return (
+                    <Link
+                      key={tab.href}
+                      href={tab.href}
+                      className={twMerge(
+                        'px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 select-none whitespace-nowrap',
+                        isActive
+                          ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                      )}
+                    >
+                      {tab.label}
+                    </Link>
+                  )
+                })}
+              </div>
+            ) : isEmployer && pathname.startsWith('/employer') ? (
               <div className="flex bg-slate-100/80 dark:bg-slate-800/60 p-1 rounded-full border border-slate-200/50 dark:border-slate-700/40">
                 {employerTabs.map((tab) => {
                   const isActive = tab.exact
@@ -121,16 +162,34 @@ export function Navbar() {
                 })}
               </div>
             ) : user && userRole === 'student' && pathname.startsWith('/student') ? (
-              <Link href={dashboardPath} className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors">
-                Dashboard
-              </Link>
+              <div className="flex bg-slate-100/80 dark:bg-slate-800/60 p-1 rounded-full border border-slate-200/50 dark:border-slate-700/40">
+                {studentTabs.map((tab) => {
+                  const isActive = tab.exact
+                    ? pathname === tab.href
+                    : pathname.startsWith(tab.href)
+                  return (
+                    <Link
+                      key={tab.href}
+                      href={tab.href}
+                      className={twMerge(
+                        'px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 select-none whitespace-nowrap',
+                        isActive
+                          ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                      )}
+                    >
+                      {tab.label}
+                    </Link>
+                  )
+                })}
+              </div>
             ) : (
               <>
                 <Link href="/#how-it-works" className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors px-2">
                   How it Works
                 </Link>
                 <Link href="/internship-rules" className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors px-2">
-                  Internship Wiki
+                  WBL Resources
                 </Link>
                 <Link href="/about" className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors px-2">
                   About Us
@@ -141,20 +200,18 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2">
-          {/* Mobile menu toggle — employer only */}
-          {isEmployer && (
-            <button
-              onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="lg:hidden p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              title="Menu"
-            >
-              {showMobileMenu ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-              )}
-            </button>
-          )}
+          {/* Mobile menu toggle */}
+          <button
+            onClick={() => setShowMobileMenu(!showMobileMenu)}
+            className="lg:hidden p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            title="Menu"
+          >
+            {showMobileMenu ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            )}
+          </button>
           {isLoading ? (
             <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse" />
           ) : user ? (
@@ -287,30 +344,82 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Mobile/Tablet Tab Bar — employer only */}
-      {isEmployer && showMobileMenu && (
-        <div className="lg:hidden border-t border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-sm animate-fade-in">
-          <div className="flex overflow-x-auto px-4 py-2 gap-1 scrollbar-hide">
-            {employerTabs.map((tab) => {
-              const isActive = tab.exact
-                ? pathname === tab.href
-                : pathname.startsWith(tab.href)
-              return (
-                <Link
-                  key={tab.href}
-                  href={tab.href}
-                  onClick={() => setShowMobileMenu(false)}
-                  className={twMerge(
-                    'px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap flex-shrink-0',
-                    isActive
-                      ? 'bg-brand-600 text-white shadow-sm'
-                      : 'text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700'
-                  )}
-                >
-                  {tab.label}
+      {/* Mobile/Tablet Dropdown Menu */}
+      {showMobileMenu && (
+        <div className="lg:hidden border-t border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md animate-fade-in absolute top-full left-0 w-full shadow-lg">
+          <div className="flex flex-col px-4 py-4 gap-2">
+            {isEducator && pathname.startsWith('/educator') ? (
+              educatorTabs.map((tab) => {
+                const isActive = tab.exact ? pathname === tab.href : pathname.startsWith(tab.href)
+                return (
+                  <Link
+                    key={tab.href}
+                    href={tab.href}
+                    className={twMerge(
+                      'px-4 py-3 rounded-xl text-sm font-bold transition-all',
+                      isActive
+                        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    )}
+                  >
+                    {tab.label}
+                  </Link>
+                )
+              })
+            ) : isEmployer && pathname.startsWith('/employer') ? (
+              employerTabs.map((tab) => {
+                const isActive = tab.exact ? pathname === tab.href : pathname.startsWith(tab.href)
+                return (
+                  <Link
+                    key={tab.href}
+                    href={tab.href}
+                    className={twMerge(
+                      'px-4 py-3 rounded-xl text-sm font-bold transition-all',
+                      isActive
+                        ? 'bg-brand-50 text-brand-600 dark:bg-brand-900/20 dark:text-brand-400'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    )}
+                  >
+                    {tab.label}
+                  </Link>
+                )
+              })
+            ) : user && userRole === 'student' && pathname.startsWith('/student') ? (
+              studentTabs.map((tab) => {
+                const isActive = tab.exact ? pathname === tab.href : pathname.startsWith(tab.href)
+                return (
+                  <Link
+                    key={tab.href}
+                    href={tab.href}
+                    className={twMerge(
+                      'px-4 py-3 rounded-xl text-sm font-bold transition-all',
+                      isActive
+                        ? 'bg-brand-50 text-brand-600 dark:bg-brand-900/20 dark:text-brand-400'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    )}
+                  >
+                    {tab.label}
+                  </Link>
+                )
+              })
+            ) : (
+              <>
+                <Link href="/#how-it-works" className="px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">
+                  How it Works
                 </Link>
-              )
-            })}
+                <Link href="/internship-rules" className="px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">
+                  WBL Resources
+                </Link>
+                <Link href="/about" className="px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">
+                  About Us
+                </Link>
+                {!user && (
+                  <Link href="/login" className="px-4 py-3 text-sm font-bold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-xl sm:hidden transition-colors">
+                    Sign In
+                  </Link>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}

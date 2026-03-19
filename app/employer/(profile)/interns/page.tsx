@@ -34,7 +34,7 @@ export default function MyInternsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">🌍 My Interns</h2>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">🌍 My Team</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Manage your hired interns, track their onboarding, and assign logistics.
           </p>

@@ -18,16 +18,18 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.internpick.com"),
   title: {
-    default: "InternPick.com - Match With the Best Local Talent Fast",
+    default: "InternPick — School-Credit Work-Based Learning Platform",
     template: "%s | InternPick",
   },
-  description: "The premier platform connecting ambitious high school students with local businesses in Springfield, NJ and surrounding areas.",
+  description: "The platform connecting schools, students, and local businesses for school-sponsored practicums and academic-credit work-based learning. FERPA-compliant. DOL-protected.",
   keywords: [
-    "high school internships",
-    "local talent",
-    "student jobs",
-    "mentorship",
-    "Springfield NJ internships",
+    "work-based learning",
+    "practicum",
+    "school credit",
+    "CTE",
+    "career technical education",
+    "student placement",
+    "FERPA compliant",
     "InternPick",
   ],
   authors: [{ name: "InternPick Team" }],
@@ -35,22 +37,22 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://www.internpick.com",
-    title: "InternPick.com - Match With the Best Local Talent Fast",
-    description: "The premier platform connecting ambitious high school students with local businesses.",
+    title: "InternPick — School-Credit Work-Based Learning",
+    description: "Connecting schools, students, and businesses for academic-credit practicums.",
     siteName: "InternPick",
     images: [
       {
         url: "/images/hero_background.png",
         width: 1200,
         height: 630,
-        alt: "InternPick - Match With the Best Local Talent Fast",
+        alt: "InternPick — Work-Based Learning Platform",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "InternPick.com - Match With the Best Local Talent Fast",
-    description: "The premier platform connecting ambitious high school students with local businesses.",
+    title: "InternPick — School-Credit Work-Based Learning",
+    description: "Connecting schools, students, and businesses for academic-credit practicums.",
     images: ["/images/hero_background.png"],
   },
   robots: {

@@ -528,3 +528,238 @@ export async function generateRoleImage(data: {
     return { base64: null, error: err.message || 'Failed to generate image' }
   }
 }
+
+// ============================================
+// AI Skill Tag Suggestions
+// ============================================
+export async function suggestSkillTags(data: {
+  title: string
+  category: string
+  description: string
+}): Promise<string[]> {
+  if (!GEMINI_API_KEY) {
+    console.warn('[Gemini] No API key — skipping skill suggestions')
+    return []
+  }
+
+  const prompt = `You are a career advisor for InternPick, a platform connecting high school students with local businesses for internships.
+
+Based on the internship role below, suggest 8-12 specific, practical skills that a high school student would learn or develop in this role. Mix both hard skills (tools, software, techniques) and soft skills (communication, teamwork, etc.).
+
+Role:
+- Title: "${data.title}"
+- Category: ${data.category || 'General'}
+- Description: ${data.description ? `"${data.description.slice(0, 500)}"` : 'Not provided yet'}
+
+Rules:
+- Each skill should be 1-4 words (e.g. "Social Media", "Customer Service", "Excel", "Public Speaking")
+- Be specific and relevant to this particular role — not generic
+- Focus on skills that are practical and recognizable to a high school student
+- Return ONLY a JSON array of strings, no explanation
+
+JSON response:`
+
+  try {
+    const response = await callGemini(prompt)
+    
+    let jsonStr = response.trim()
+    jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '')
+    const arrMatch = jsonStr.match(/\[[\s\S]*\]/)
+    if (arrMatch) jsonStr = arrMatch[0]
+    
+    const result = JSON.parse(jsonStr)
+    if (Array.isArray(result)) {
+      return result.filter((s: unknown) => typeof s === 'string' && s.length > 0).slice(0, 12)
+    }
+    return []
+  } catch (err) {
+    console.error('[Gemini] Skill suggestion error:', err)
+    return []
+  }
+}
+
+// ============================================
+// DOL Compliance Review for Unpaid Roles
+// ============================================
+export async function reviewDOLCompliance(data: {
+  title: string
+  category: string
+  description: string
+}): Promise<{
+  compliant: boolean
+  score: number
+  issues: string[]
+  suggestions: string[]
+}> {
+  if (!GEMINI_API_KEY) {
+    console.warn('[Gemini] No API key — skipping DOL review')
+    return { compliant: true, score: 100, issues: [], suggestions: [] }
+  }
+
+  const prompt = `You are a Department of Labor (DOL) compliance expert reviewing an UNPAID internship listing for a high school student internship platform.
+
+Review this role description against the DOL's 7-Factor Primary Beneficiary Test for unpaid internships:
+
+Role Title: "${data.title}"
+Category: ${data.category || 'General'}
+Description: """
+${data.description.slice(0, 1500)}
+"""
+
+The 7 factors are:
+1. Both parties understand there is no expectation of compensation
+2. Training is similar to an educational environment
+3. Tied to formal education (coursework or academic credit)
+4. Accommodates academic calendar/schedule
+5. Limited duration tied to beneficial learning
+6. Does NOT displace regular employees — intern works under close supervision
+7. No entitlement to a paid position afterward
+
+Score the description from 0-100 on DOL compliance. A description PASSES (score >= 60) if it clearly emphasizes:
+- What the intern will LEARN (skills, training, mentorship)
+- Educational/career development benefit to the intern
+- That the intern does NOT replace paid employees
+- Supervision and mentorship structure
+
+A description FAILS if it:
+- Reads like a job posting asking for free labor
+- Lists only tasks/duties without educational framing
+- Implies the intern will do regular employee work
+- Lacks any mention of learning, mentorship, or educational benefit
+
+Respond ONLY in valid JSON (no code fences):
+{
+  "compliant": true/false,
+  "score": 0-100,
+  "issues": ["specific issue 1", "specific issue 2"],
+  "suggestions": ["actionable suggestion to fix issue 1", "actionable suggestion 2"]
+}
+
+If compliant, issues and suggestions can be empty arrays. Be strict but fair.`
+
+  try {
+    const response = await callGemini(prompt)
+
+    let jsonStr = response.trim()
+    jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '')
+    const objMatch = jsonStr.match(/\{[\s\S]*\}/)
+    if (objMatch) jsonStr = objMatch[0]
+
+    const result = JSON.parse(jsonStr)
+    console.log(`[Gemini] DOL Review: score=${result.score}, compliant=${result.compliant}`)
+    return {
+      compliant: !!result.compliant,
+      score: typeof result.score === 'number' ? result.score : 0,
+      issues: Array.isArray(result.issues) ? result.issues : [],
+      suggestions: Array.isArray(result.suggestions) ? result.suggestions : [],
+    }
+  } catch (err) {
+    console.error('[Gemini] DOL review error:', err)
+    // Fail open — don't block if AI is unavailable
+    return { compliant: true, score: 100, issues: [], suggestions: [] }
+  }
+}
+
+// ============================================
+// Moderate Practicum Programs (Educator Posts)
+// FERPA + Safety + Clarity checks
+// ============================================
+export async function moderatePracticumProgram(data: {
+  title: string
+  description: string
+  schoolName: string
+  category?: string
+}): Promise<{
+  approved: boolean
+  ferpaViolations: string[]
+  safetyIssues: string[]
+  clarityIssues: string[]
+  suggestions: string[]
+}> {
+  const prompt = `You are a compliance moderator for InternPick.com, a platform where school Educators post "Practicum Programs" (Calls for Hosts) seeking local businesses to host student interns for academic credit.
+
+Your job is to review the following Practicum Program BEFORE it goes live. You must enforce three checks:
+
+--- CHECK 1: FERPA COMPLIANCE (CRITICAL — BLOCK if violated) ---
+The Family Educational Rights and Privacy Act (FERPA) forbids sharing personally identifiable information (PII) about students without consent.
+BLOCK the post if it contains:
+- Individual student names (first, last, or full names)
+- Specific ages or birthdates of individual students
+- Student ID numbers, addresses, or phone numbers
+- Any identifiable markers that refer to a specific minor
+NOTE: Generic references are FINE, such as: "Our senior class," "students ages 16-18," "5 students in our graphic design program." These are programmatic descriptions, not PII.
+
+--- CHECK 2: SAFETY (Hazardous Duties for Minors) ---
+Flag if the program description requests that the host employer have students perform:
+- Operating heavy machinery or power tools
+- Working with hazardous chemicals, radiation, or biohazards
+- Driving commercial vehicles
+- Working in construction zones, roofing, or at heights
+- Serving alcohol, working in bars, or operating in adult entertainment
+- Any tasks prohibited for minors under federal/state child labor laws
+
+--- CHECK 3: CLARITY (Host Requirements) ---
+Flag if the description does NOT clearly state:
+- What the host employer is expected to provide (e.g., desk space, mentorship, project work)
+- What learning outcomes or skills the student will gain
+- The general structure of the program (shadowing vs. project-based)
+
+--- POST TO REVIEW ---
+School: ${data.schoolName}
+Program Title: ${data.title}
+Category: ${data.category || 'Not specified'}
+Description: ${data.description}
+
+Respond ONLY in valid JSON (no code fences):
+{
+  "approved": true/false,
+  "ferpaViolations": ["specific violation 1"],
+  "safetyIssues": ["specific safety concern 1"],
+  "clarityIssues": ["what is missing or unclear"],
+  "suggestions": ["actionable improvement suggestion 1"]
+}
+
+If approved, all issue arrays should be empty. A post must be BLOCKED (approved: false) if there are ANY ferpaViolations. Safety and clarity issues are advisory but should also cause a block if severe.`
+
+  try {
+    const response = await callGemini(prompt)
+    let jsonStr = response.trim()
+    jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '')
+    const objMatch = jsonStr.match(/\{[\s\S]*\}/)
+    if (objMatch) jsonStr = objMatch[0]
+
+    const result = JSON.parse(jsonStr)
+    console.log(`[Gemini] Practicum moderation: approved=${result.approved}`)
+    return {
+      approved: !!result.approved,
+      ferpaViolations: Array.isArray(result.ferpaViolations) ? result.ferpaViolations : [],
+      safetyIssues: Array.isArray(result.safetyIssues) ? result.safetyIssues : [],
+      clarityIssues: Array.isArray(result.clarityIssues) ? result.clarityIssues : [],
+      suggestions: Array.isArray(result.suggestions) ? result.suggestions : [],
+    }
+  } catch (err) {
+    console.error('[Gemini] Practicum moderation error:', err)
+    // Fail open — don't block if AI is unavailable, but flag for manual review
+    return { approved: true, ferpaViolations: [], safetyIssues: [], clarityIssues: ['AI moderation temporarily unavailable — flagged for manual review'], suggestions: [] }
+  }
+}
+
+// ============================================
+// Educator Email Domain Validation
+// ============================================
+export function isEducatorEmailDomain(email: string): boolean {
+  const domain = email.split('@')[1]?.toLowerCase()
+  if (!domain) return false
+
+  // .edu domains (colleges/universities)
+  if (domain.endsWith('.edu')) return true
+
+  // .k12.[state].us domains (K-12 public schools)
+  if (/\.k12\.[a-z]{2}\.us$/.test(domain)) return true
+
+  // .org domains (non-profits, charter schools)
+  if (domain.endsWith('.org')) return true
+
+  return false
+}
+

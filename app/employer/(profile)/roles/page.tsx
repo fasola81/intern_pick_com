@@ -9,7 +9,8 @@ import { createBrowserClient } from '@supabase/ssr'
 export default function EmployerRolesPage() {
   const [roles, setRoles] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({})
+  const [companyLogoUrl, setCompanyLogoUrl] = useState<string | undefined>(undefined)
+  const [copiedRoleId, setCopiedRoleId] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchRoles() {
@@ -25,6 +26,14 @@ export default function EmployerRolesPage() {
           .eq('company_id', user.id)
           .order('created_at', { ascending: false })
         setRoles(data || [])
+        
+        // Fetch company logo
+        const { data: companyData } = await supabase
+          .from('companies')
+          .select('logo_url')
+          .eq('id', user.id)
+          .single()
+        if (companyData?.logo_url) setCompanyLogoUrl(companyData.logo_url)
       }
       setIsLoading(false)
     }
@@ -70,8 +79,12 @@ export default function EmployerRolesPage() {
           <Link href="/employer/create"><Button>Post Your First Role</Button></Link>
         </div>
       ) : (
-        roles.map((role) => (
-          <div key={role.id} className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row overflow-hidden group hover:border-brand-300 dark:hover:border-brand-700 transition-colors relative">
+        roles.map((role, index) => (
+          <div key={role.id} className={`rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row overflow-hidden group hover:border-brand-300 dark:hover:border-brand-700 transition-colors relative ${
+            index % 2 === 0
+              ? 'bg-white dark:bg-slate-900'
+              : 'bg-slate-50/70 dark:bg-slate-900/70'
+          }`}>
             
             {/* Left Column: Role Details (50%) */}
             <div className="flex-1 w-full md:w-1/2 p-6 md:p-8 flex flex-col relative">
@@ -109,45 +122,44 @@ export default function EmployerRolesPage() {
                   <p className="text-xs text-slate-400 dark:text-slate-500">
                     Posted {new Date(role.created_at).toLocaleDateString()}
                   </p>
+                  {role.description && (
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 line-clamp-3 leading-relaxed">
+                      {role.description}
+                    </p>
+                  )}
                 </div>
               </div>
               
-              <div className="relative z-10 mt-6 md:mt-auto pt-6 flex pointer-events-none">
+              <div className="relative z-10 mt-6 md:mt-auto pt-6 flex items-end gap-3 pointer-events-none">
                 <div className="flex flex-col items-center bg-slate-50 dark:bg-slate-800/50 px-4 py-2 rounded-xl min-w-[80px]">
                   <span className="block text-2xl font-black text-slate-900 dark:text-white leading-none">{role.hours_per_week || '—'}</span>
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-1">Hrs/wk</span>
                 </div>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    const url = `${window.location.origin}/employer/role/${role.id}`
+                    navigator.clipboard.writeText(url)
+                    setCopiedRoleId(role.id)
+                    setTimeout(() => setCopiedRoleId(null), 2000)
+                  }}
+                  className="pointer-events-auto flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 rounded-xl hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-900/20 dark:hover:text-brand-400 transition-colors border border-transparent hover:border-brand-200 dark:hover:border-brand-800"
+                  title="Copy link to share"
+                >
+                  {copiedRoleId === role.id ? (
+                    <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied!</>
+                  ) : (
+                    <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> Share</>
+                  )}
+                </button>
               </div>
             </div>
 
             {/* Right Column: Discussion (50%) */}
             <div className="w-full md:w-1/2 border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 p-6 md:p-8 bg-slate-50/30 dark:bg-slate-900/30 flex flex-col relative z-20">
-              <div className="flex justify-between items-center mb-1">
-                <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                  💬 Role Discussion
-                </h4>
-                <button
-                  onClick={() => setExpandedComments(prev => ({ ...prev, [role.id]: !prev[role.id] }))}
-                  className="text-xs font-bold text-slate-500 hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-400 transition-colors"
-                >
-                  {expandedComments[role.id] ? 'Hide Thread' : 'Open Thread'}
-                </button>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-                These discussions are visible to you and interns logged in at InternPick.com.
-              </p>
-              
               <div className="flex-1 flex flex-col min-h-[140px]">
-                {expandedComments[role.id] ? (
-                  <CommentThread opportunityId={role.id} />
-                ) : (
-                  <div 
-                    onClick={() => setExpandedComments(prev => ({ ...prev, [role.id]: true }))}
-                    className="flex-1 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
-                  >
-                     <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">Click to view or add notes</span>
-                  </div>
-                )}
+                <CommentThread opportunityId={role.id} employerLogoUrl={companyLogoUrl} isEmployer={true} />
               </div>
             </div>
             

@@ -10,13 +10,14 @@ const TOC_SECTIONS = [
   { id: 'benefits-students', label: 'Benefits for Students' },
   { id: 'benefits-employers', label: 'Benefits for Employers' },
   { id: 'paid-internships', label: 'Paid Internships' },
-  { id: 'unpaid-internships', label: 'Unpaid Internships' },
+  { id: 'school-credit', label: 'School-Credit Internships' },
+  { id: 'unpaid-internships', label: 'Unpaid (No Credit)' },
   { id: 'dol-test', label: 'DOL 7-Factor Test' },
   { id: 'tax-implications', label: 'Tax & Financial Impact' },
   { id: 'state-minimum-wages', label: 'State Minimum Wages' },
   { id: 'flsa', label: 'Fair Labor Standards Act' },
   { id: 'your-rights', label: 'Your Rights & Getting Help' },
-  { id: 'how-internpick-helps', label: 'How InternPick Protects You' },
+
   { id: 'resources', label: 'Official Resources' },
 ]
 
@@ -124,22 +125,9 @@ export default function InternshipRulesPage() {
                 Internships connect students with real-world work environments, giving them hands-on experience while businesses gain fresh perspectives and future talent. But not all internships are structured the same way.
               </p>
               <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
-                This guide covers the two main types — <strong className="text-slate-900 dark:text-white">paid</strong> and <strong className="text-slate-900 dark:text-white">unpaid</strong> — and explains the legal requirements, tax implications, and best practices for each. Whether you&apos;re a student exploring opportunities or a business creating them, this page will help you make informed decisions.
+                This guide covers the three main types of internships — <strong className="text-slate-900 dark:text-white">Paid</strong>, <strong className="text-slate-900 dark:text-white">School-Credit</strong>, and <strong className="text-slate-900 dark:text-white">Unpaid (Experience-Only)</strong> — and explains the legal requirements, tax implications, and best practices for each. Whether you&apos;re a student exploring opportunities or a business creating them, this page will help you make informed decisions.
               </p>
-              <div className="bg-gradient-to-r from-brand-600 to-indigo-600 rounded-2xl p-6 shadow-lg">
-                <div className="flex items-start gap-4">
-                  <span className="text-3xl flex-shrink-0">🤖</span>
-                  <div>
-                    <h3 className="text-lg font-extrabold text-white mb-1">AI-Powered Compliance Assistance</h3>
-                    <p className="text-brand-100 text-sm leading-relaxed">
-                      InternPick uses <strong className="text-white">Google Gemini AI</strong> to automatically review every listing before publication. Our AI checks descriptions against DOL guidelines and flags potential compliance issues.
-                    </p>
-                    <p className="text-brand-200 text-xs mt-2 italic">
-                      ⚠️ AI review is assistive only and does not constitute legal advice.
-                    </p>
-                  </div>
-                </div>
-              </div>
+
             </section>
 
             <hr className="border-slate-200 dark:border-slate-800 mb-16" />
@@ -212,7 +200,7 @@ export default function InternshipRulesPage() {
                   <h3 className="font-bold text-green-800 dark:text-green-300 mb-3">🏢 For Employers</h3>
                   <ul className="space-y-2.5 text-sm text-green-700 dark:text-green-400">
                     <li className="flex gap-2"><span className="flex-shrink-0">✓</span><span>Wages are <strong>fully tax-deductible</strong> as a business expense</span></li>
-                    <li className="flex gap-2"><span className="flex-shrink-0">✓</span><span>May qualify for the <strong>Work Opportunity Tax Credit</strong> (WOTC)</span></li>
+                    <li className="flex gap-2"><span className="flex-shrink-0">✓</span><span>May qualify for the <strong>Work Opportunity Tax Credit</strong> (WOTC) if the intern meets specific targeted demographics</span></li>
                     <li className="flex gap-2"><span className="flex-shrink-0">✓</span><span>No risk of DOL misclassification lawsuits</span></li>
                     <li className="flex gap-2"><span className="flex-shrink-0">✓</span><span>Attracts better candidates and builds loyalty</span></li>
                     <li className="flex gap-2"><span className="flex-shrink-0">✓</span><span>Must comply with <strong>minimum wage</strong>, overtime, and hour restrictions for minors</span></li>
@@ -235,21 +223,190 @@ export default function InternshipRulesPage() {
 
               <div className="bg-slate-100 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-200 dark:border-slate-700">
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  <strong className="text-slate-900 dark:text-white">Bottom line:</strong> Paid internships are straightforward. The intern is an employee, the business gets tax deductions, and everyone has clear legal protections. This is the recommended path for most businesses on InternPick.
+                  <strong className="text-slate-900 dark:text-white">Bottom line:</strong> Paid internships are straightforward. The intern is an employee, the business gets tax deductions, and everyone has clear legal protections. This is the recommended path for most businesses.
                 </p>
               </div>
             </section>
 
             <hr className="border-slate-200 dark:border-slate-800 mb-16" />
 
-            {/* ────────────── UNPAID INTERNSHIPS ────────────── */}
-            <section id="unpaid-internships" className="scroll-mt-24 mb-16">
-              <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-6" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>Unpaid Internships</h2>
+            {/* ────────────── SCHOOL-CREDIT INTERNSHIPS ────────────── */}
+            <section id="school-credit" className="scroll-mt-24 mb-16">
+              <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-6" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>Internships for School Credit 📚</h2>
 
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
+                A school-credit internship (often called <strong className="text-slate-900 dark:text-white">Work-Based Learning</strong> or <strong className="text-slate-900 dark:text-white">Practicum</strong>) is a formal, three-way partnership between the Student, the School, and the Employer. The intern receives <strong className="text-slate-900 dark:text-white">academic credit</strong> toward their graduation requirements in exchange for their participation.
+              </p>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                <em>Note: Employers can choose to pay these interns, but the defining feature is the academic credit. Pay and credit are not mutually exclusive — in fact, paying an intern <strong className="text-slate-900 dark:text-white">while</strong> they earn credit is the best-case scenario!</em>
+              </p>
+
+              {/* Golden Rule */}
               <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-xl p-5 mb-8">
-                <p className="text-sm font-bold text-amber-800 dark:text-amber-300 mb-2">⚠️ Strict Legal Requirements Apply</p>
-                <p className="text-sm text-amber-700 dark:text-amber-400">
-                  Unpaid internships at <strong>for-profit</strong> businesses must pass the DOL&apos;s Primary Beneficiary Test. If they don&apos;t, the intern is legally an employee and must be paid minimum wage. Non-compliant businesses risk lawsuits, back-pay, and penalties.
+                <p className="text-sm font-bold text-amber-900 dark:text-amber-200 mb-2">📜 The Golden Rule</p>
+                <p className="text-sm text-amber-800 dark:text-amber-300 leading-relaxed">
+                  <strong>Businesses do not grant school credit. Only academic institutions (high schools, colleges, or universities) can grant credit.</strong> When an internship is &quot;for school credit,&quot; it is actually a formal three-way partnership. Almost any legitimate company can <em>host</em> a credit-seeking intern, but the student&apos;s school holds 100% of the power to approve or reject the placement.
+                </p>
+              </div>
+
+              {/* 3-Party Process */}
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">How the Three-Party Process Works</h3>
+              <div className="grid md:grid-cols-3 gap-4 mb-8">
+                <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-800/30 rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xl">🏫</span>
+                    <h4 className="font-bold text-indigo-800 dark:text-indigo-300 text-sm">The School</h4>
+                  </div>
+                  <ul className="space-y-2 text-xs text-indigo-700 dark:text-indigo-400 leading-relaxed">
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">•</span><span>Student enrolls in a specific internship course (e.g., &quot;Practicum&quot; or &quot;Work-Based Learning&quot;)</span></li>
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">•</span><span>School dictates how many work hours equal a credit (e.g., 120 hours = 3 credits)</span></li>
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">•</span><span>Assigns a faculty advisor who monitors progress</span></li>
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">•</span><span><strong>Reviews and approves</strong> the employer&apos;s role description before the student can begin</span></li>
+                  </ul>
+                </div>
+                <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/30 rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xl">🏢</span>
+                    <h4 className="font-bold text-green-800 dark:text-green-300 text-sm">The Employer</h4>
+                  </div>
+                  <ul className="space-y-2 text-xs text-green-700 dark:text-green-400 leading-relaxed">
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">•</span><span>Agrees to act as the &quot;host classroom&quot;</span></li>
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">•</span><span>Signs a <strong>Learning Agreement</strong> provided by the school</span></li>
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">•</span><span>Assigns a mentor / supervisor to the student</span></li>
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">•</span><span>Fills out a <strong>performance evaluation</strong> at the end of the term</span></li>
+                  </ul>
+                </div>
+                <div className="bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800/30 rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xl">🎓</span>
+                    <h4 className="font-bold text-brand-800 dark:text-brand-300 text-sm">The Student</h4>
+                  </div>
+                  <ul className="space-y-2 text-xs text-brand-700 dark:text-brand-400 leading-relaxed">
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">•</span><span>Takes the role description to their school counselor for <strong>approval</strong></span></li>
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">•</span><span>Logs their work hours for both school and employer</span></li>
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">•</span><span>Completes academic deliverables (paper, portfolio, weekly journal)</span></li>
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">•</span><span>Note: College students usually pay tuition for these credits</span></li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* FLSA Shield */}
+              <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-800/30 rounded-xl p-5 mb-8">
+                <p className="text-sm font-bold text-indigo-800 dark:text-indigo-300 mb-2">🛡️ The FLSA Shield — Why This Is the Safest Path</p>
+                <p className="text-sm text-indigo-700 dark:text-indigo-400 leading-relaxed">
+                  Under the DOL&apos;s 7-Factor Primary Beneficiary Test, <strong>Factor #3</strong> explicitly looks at whether the internship is &quot;tied to the intern&apos;s formal education program by integrated coursework or the receipt of academic credit.&quot; Courts have consistently ruled that if a student is earning graduation credit, it proves beyond a reasonable doubt that the student is the <strong>primary beneficiary</strong>. Offering school credit makes an unpaid internship <strong>legally defensible</strong>.
+                </p>
+              </div>
+
+              {/* Can Interns Do "For-Profit" Work? */}
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Can Interns Perform Productive, For-Profit Work?</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
+                This is the <strong className="text-slate-900 dark:text-white">#1 trap employers fall into</strong>. The answer depends entirely on whether the intern is paid:
+              </p>
+              <div className="grid md:grid-cols-2 gap-5 mb-8">
+                <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 rounded-xl p-5">
+                  <p className="font-bold text-red-800 dark:text-red-300 text-sm mb-3">🛑 If the Intern is UNPAID — NO</p>
+                  <p className="text-xs text-red-700 dark:text-red-400 leading-relaxed mb-3">
+                    You <strong>cannot</strong> use school credit as a &quot;get out of jail free&quot; card to get free labor for profit-generating tasks. Under the FLSA, unpaid internships must pass the Primary Beneficiary Test — they must primarily benefit the <strong>student&apos;s education</strong>, not the company&apos;s bottom line.
+                  </p>
+                  <p className="text-xs font-bold text-red-900 dark:text-red-200 mb-1.5">What&apos;s illegal:</p>
+                  <ul className="space-y-1 text-xs text-red-700 dark:text-red-400 mb-3">
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">✕</span><span>Fulfilling customer orders</span></li>
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">✕</span><span>Cold-calling sales leads</span></li>
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">✕</span><span>Doing solitary data entry</span></li>
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">✕</span><span>Running the cash register because an employee called in sick</span></li>
+                  </ul>
+                  <p className="text-xs font-bold text-green-800 dark:text-green-300 mb-1.5">What&apos;s legal:</p>
+                  <ul className="space-y-1 text-xs text-green-700 dark:text-green-400">
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">✓</span><span>Shadowing a sales director</span></li>
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">✓</span><span>Working on a &quot;dummy&quot; project never sold to clients</span></li>
+                    <li className="flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">✓</span><span>Drafting a mock marketing campaign reviewed by a mentor</span></li>
+                  </ul>
+                </div>
+                <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/30 rounded-xl p-5">
+                  <p className="font-bold text-green-800 dark:text-green-300 text-sm mb-3">✅ If the Intern is PAID — YES, Absolutely</p>
+                  <p className="text-xs text-green-700 dark:text-green-400 leading-relaxed mb-3">
+                    A student can earn school credit <strong>and</strong> get paid an hourly wage at the same time. <strong>This is the best-case scenario!</strong>
+                  </p>
+                  <p className="text-xs text-green-700 dark:text-green-400 leading-relaxed mb-3">
+                    If you pay the intern at least minimum wage, they are legally your employee. Standard labor laws apply, meaning you <strong>can</strong> assign them routine tasks, operational work, and revenue-generating projects — just like any other employee — while their school independently awards them credit for the experience.
+                  </p>
+                  <div className="bg-green-100 dark:bg-green-800/20 rounded-lg p-3">
+                    <p className="text-xs font-bold text-green-900 dark:text-green-200">💡 Pro Tip:</p>
+                    <p className="text-[11px] text-green-800 dark:text-green-300">Paid + Credit is the gold standard. The employer gets productive help, the student gets paid AND earns academic credit, and the legal risk is virtually zero.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Employer/Student benefit cards */}
+              <div className="grid md:grid-cols-2 gap-6 mb-8">
+                <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/30 rounded-xl p-6">
+                  <h3 className="font-bold text-green-800 dark:text-green-300 mb-3">🏢 Benefits for Employers</h3>
+                  <ul className="space-y-2.5 text-sm text-green-700 dark:text-green-400">
+                    <li className="flex gap-2"><span className="flex-shrink-0">✓</span><span><strong>Reduces DOL risk</strong> — academic credit is the strongest factor in passing the Primary Beneficiary Test</span></li>
+                    <li className="flex gap-2"><span className="flex-shrink-0">✓</span><span><strong>School partnership</strong> — you work directly with a counselor or coordinator who vets the student</span></li>
+                    <li className="flex gap-2"><span className="flex-shrink-0">✓</span><span><strong>Insurance benefits</strong> — in many states, the school&apos;s liability or workers&apos; comp insurance covers the student</span></li>
+                    <li className="flex gap-2"><span className="flex-shrink-0">⚠️</span><span><strong>Admin requirement</strong> — sign the school&apos;s Learning Agreement, track hours, and complete a final evaluation</span></li>
+                  </ul>
+                </div>
+
+                <div className="bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800/30 rounded-xl p-6">
+                  <h3 className="font-bold text-brand-800 dark:text-brand-300 mb-3">🎓 Benefits for Students</h3>
+                  <ul className="space-y-2.5 text-sm text-brand-700 dark:text-brand-400">
+                    <li className="flex gap-2"><span className="flex-shrink-0">✓</span><span><strong>Academic progress</strong> — earn credits toward graduation while gaining real-world experience</span></li>
+                    <li className="flex gap-2"><span className="flex-shrink-0">✓</span><span><strong>Stronger protections</strong> — because it&apos;s tied to your school, educational protections (like Title IX) extend to your workplace</span></li>
+                    <li className="flex gap-2"><span className="flex-shrink-0">⚠️</span><span><strong>Your responsibility</strong> — You must get the internship approved by your school counselor before you begin working</span></li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* 🛑 Myth vs. Fact Legal Alert */}
+              <div className="bg-red-50 dark:bg-red-900/10 border-2 border-red-300 dark:border-red-700/50 rounded-2xl p-6 mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-xl">🛑</span>
+                  <h3 className="font-extrabold text-red-900 dark:text-red-200 text-base">Employer Legal Alert: The &quot;School Credit&quot; Myth</h3>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4 mb-4">
+                  <div className="bg-red-100 dark:bg-red-900/20 rounded-xl p-4">
+                    <p className="text-xs font-bold text-red-900 dark:text-red-200 mb-2 uppercase tracking-wider">❌ Myth</p>
+                    <p className="text-sm text-red-800 dark:text-red-300 italic leading-relaxed">
+                      &quot;I don&apos;t have a budget to pay an intern, so I will just offer them school credit to do routine work for my business.&quot;
+                    </p>
+                  </div>
+                  <div className="bg-green-100 dark:bg-green-900/20 rounded-xl p-4">
+                    <p className="text-xs font-bold text-green-900 dark:text-green-200 mb-2 uppercase tracking-wider">✅ Fact</p>
+                    <p className="text-sm text-green-800 dark:text-green-300 leading-relaxed">
+                      This is legally false and violates the Fair Labor Standards Act (FLSA). School credit is <strong>not</strong> a legal substitute for wages.
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-white dark:bg-slate-800/50 rounded-xl p-4 border border-red-200 dark:border-red-800/30">
+                  <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                    <strong className="text-slate-900 dark:text-white">The Bottom Line:</strong> Employers cannot &quot;grant&quot; school credit — only a student&apos;s academic institution can. Furthermore, if an internship is unpaid, the intern <strong>cannot</strong> be used to perform routine, profit-generating work that displaces a regular employee — even if they are receiving school credit. Unpaid internships must be <strong>heavily educational, heavily mentored, and primarily benefit the student</strong>.
+                  </p>
+                  <p className="text-sm text-brand-700 dark:text-brand-400 font-bold mt-3">
+                    💡 If your company needs an intern to perform productive work that drives revenue or assists with daily operations, you must offer a <strong>Paid Internship</strong>, regardless of whether the student is also earning academic credit.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-slate-100 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-200 dark:border-slate-700">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  <strong className="text-slate-900 dark:text-white">How it works operationally:</strong> A school-credit internship is a <strong className="text-slate-900 dark:text-white">tripartite agreement</strong> between the Employer, the Student, and the School. The school provides an academic framework (a syllabus, a faculty advisor, and credit toward graduation). The employer provides the work environment, assigns a supervisor, and signs a &quot;Learning Agreement&quot; or &quot;Training Plan&quot; with the school, completing a final evaluation of the student.
+                </p>
+              </div>
+            </section>
+
+            <hr className="border-slate-200 dark:border-slate-800 mb-16" />
+
+            {/* ────────────── UNPAID INTERNSHIPS (NO CREDIT) ────────────── */}
+            <section id="unpaid-internships" className="scroll-mt-24 mb-16">
+              <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-6" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>Unpaid Internships (Experience-Only / No Credit)</h2>
+
+              <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 rounded-xl p-5 mb-8">
+                <p className="text-sm font-bold text-red-800 dark:text-red-300 mb-2">🚨 Highest Legal Risk — Strict DOL Scrutiny</p>
+                <p className="text-sm text-red-700 dark:text-red-400">
+                  Unpaid, non-credit internships carry the <strong>highest legal risk</strong> for employers and offer the <strong>fewest protections</strong> for students. They are heavily scrutinized by the DOL. If you cannot offer pay or school credit, the experience must be <strong>strictly observational</strong> (like job shadowing).
                 </p>
               </div>
 
@@ -285,7 +442,7 @@ export default function InternshipRulesPage() {
 
               <div className="bg-slate-100 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-200 dark:border-slate-700">
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  <strong className="text-slate-900 dark:text-white">Bottom line:</strong> Unpaid internships carry significant legal risk for employers and fewer protections for students. They&apos;re only appropriate when the internship is genuinely educational and doesn&apos;t displace paid work. When in doubt, <strong className="text-slate-900 dark:text-white">pay your interns</strong>.
+                  <strong className="text-slate-900 dark:text-white">Bottom line:</strong> Unpaid, non-credit internships carry the highest legal risk for employers and offer the fewest protections for students. They are heavily scrutinized by the DOL. If you cannot offer pay or school credit, the experience must be <strong className="text-slate-900 dark:text-white">strictly observational</strong> (like job shadowing).
                 </p>
               </div>
             </section>
@@ -330,34 +487,36 @@ export default function InternshipRulesPage() {
             <section id="tax-implications" className="scroll-mt-24 mb-16">
               <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-6" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>Tax &amp; Financial Impact</h2>
               <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
-                The tax picture differs significantly between paid and unpaid internships. Here&apos;s a side-by-side comparison:
+                The tax and legal picture differs significantly between the three internship types. Here&apos;s a side-by-side comparison:
               </p>
 
-              {/* Comparison Table */}
+              {/* 3-Column Comparison Table */}
               <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 mb-8">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-100 dark:bg-slate-800">
-                      <th className="text-left px-5 py-3 font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-700">Category</th>
-                      <th className="text-left px-5 py-3 font-bold text-green-700 dark:text-green-400 border-b border-slate-200 dark:border-slate-700">💰 Paid</th>
-                      <th className="text-left px-5 py-3 font-bold text-amber-700 dark:text-amber-400 border-b border-slate-200 dark:border-slate-700">🆓 Unpaid</th>
+                      <th className="text-left px-4 py-3 font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-700">Category</th>
+                      <th className="text-left px-4 py-3 font-bold text-green-700 dark:text-green-400 border-b border-slate-200 dark:border-slate-700">💰 Paid</th>
+                      <th className="text-left px-4 py-3 font-bold text-indigo-700 dark:text-indigo-400 border-b border-slate-200 dark:border-slate-700">📚 School Credit</th>
+                      <th className="text-left px-4 py-3 font-bold text-red-700 dark:text-red-400 border-b border-slate-200 dark:border-slate-700">🆓 Unpaid (No Credit)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                     {[
-                      { cat: 'Wage deduction', paid: 'Yes — fully deductible as business expense', unpaid: 'No — no wages = nothing to deduct' },
-                      { cat: 'Tax credits', paid: 'May qualify for WOTC', unpaid: 'Not eligible' },
-                      { cat: 'Training time', paid: 'Part of compensation cost', unpaid: 'Not deductible (IRS only allows hard costs)' },
-                      { cat: 'Supplies & equipment', paid: 'Deductible', unpaid: 'Deductible' },
-                      { cat: 'Travel reimbursements', paid: 'Deductible (subject to IRS limits)', unpaid: 'Deductible (subject to IRS limits)' },
-                      { cat: 'Payroll taxes', paid: 'Applies (FICA, unemployment)', unpaid: 'Not applicable' },
-                      { cat: 'W-2 reporting', paid: 'Required', unpaid: 'Not required' },
-                      { cat: 'Workers\' comp', paid: 'Required', unpaid: 'Depends on state law' },
+                      { cat: 'Compensation', paid: 'Hourly wage / stipend', credit: 'Academic Credit (Pay is optional)', unpaid: 'Mentorship / Job Shadowing' },
+                      { cat: 'Primary Beneficiary', paid: 'Mutual Benefit', credit: 'The Student (Educational)', unpaid: 'The Student (Educational)' },
+                      { cat: 'Wage Deduction', paid: 'Yes (Fully deductible)', credit: 'Optional (If paid)', unpaid: 'No (Nothing to deduct)' },
+                      { cat: 'Workers\' Comp', paid: 'Required by Employer', credit: 'Often covered by School', unpaid: 'Depends on state law' },
+                      { cat: 'Legal Risk', paid: 'Very Low', credit: 'Low (Protected by Academic tie)', unpaid: 'High (Strict DOL Scrutiny)' },
+                      { cat: 'Employer Paperwork', paid: 'W-2s, Payroll', credit: 'School Learning Agreements', unpaid: 'Unpaid Internship Contract' },
+                      { cat: 'Tax Credits (WOTC)', paid: 'May qualify if intern meets targeted demographics', credit: 'Only if paid', unpaid: 'Not eligible' },
+                      { cat: 'Payroll Taxes', paid: 'Applies (FICA, unemployment)', credit: 'Only if paid', unpaid: 'Not applicable' },
                     ].map((row, i) => (
                       <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                        <td className="px-5 py-3 font-medium text-slate-900 dark:text-white">{row.cat}</td>
-                        <td className="px-5 py-3 text-slate-600 dark:text-slate-400">{row.paid}</td>
-                        <td className="px-5 py-3 text-slate-600 dark:text-slate-400">{row.unpaid}</td>
+                        <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{row.cat}</td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{row.paid}</td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{row.credit}</td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{row.unpaid}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -366,7 +525,7 @@ export default function InternshipRulesPage() {
 
               <div className="bg-slate-100 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-200 dark:border-slate-700">
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  <strong className="text-slate-900 dark:text-white">Key takeaway:</strong> Paid internships offer clear financial benefits (tax deductions, WOTC eligibility). Unpaid internships have no payroll-related tax advantages — the only deductions are for hard costs like supplies and equipment.
+                  <strong className="text-slate-900 dark:text-white">Key takeaway:</strong> Paid internships offer clear financial benefits and the lowest legal risk. School-credit internships are the safest path for unpaid roles. Experience-only unpaid internships carry the highest risk and should be limited to job shadowing.
                 </p>
               </div>
             </section>
@@ -426,9 +585,12 @@ export default function InternshipRulesPage() {
                 </table>
               </div>
 
-              <div className="mt-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30 rounded-xl p-4">
-                <p className="text-xs text-blue-700 dark:text-blue-400">
-                  <strong>Note:</strong> Rates are as of 2024–2025 and may be updated annually. Some cities and counties have higher local minimums. Always verify with your <a href="https://www.dol.gov/agencies/whd/minimum-wage/state" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-800">state&apos;s Department of Labor</a> for the most current rate.
+              <div className="mt-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-xl p-4 space-y-2">
+                <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
+                  ⚠️ Important: Rates shown may not reflect the latest adjustments. Many states update rates annually due to automatic inflation indexing.
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  <strong>Local city/county minimum wages often supersede state laws. Employers must always pay the highest applicable rate.</strong> For the most current and accurate information, visit the <a href="https://www.dol.gov/agencies/whd/minimum-wage/state" target="_blank" rel="noopener noreferrer" className="underline font-bold hover:text-amber-900">DOL&apos;s Interactive State Minimum Wage Map ↗</a>
                 </p>
               </div>
             </section>
@@ -479,10 +641,11 @@ export default function InternshipRulesPage() {
               <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30 rounded-xl p-5">
                 <p className="text-sm font-bold text-blue-800 dark:text-blue-300 mb-2">💡 Youth Labor Law Reminders</p>
                 <ul className="space-y-1.5 text-sm text-blue-700 dark:text-blue-400">
-                  <li>• Minors (14–17) have <strong>restricted work hours</strong> during the school year</li>
+                  <li>• Under federal FLSA law, only <strong>14- and 15-year-olds</strong> have federally restricted work hours. <strong>16- and 17-year-olds</strong> have no federal hour restrictions, though many state laws do restrict them</li>
+                  <li>• Most states legally require minors under 18 to obtain an <strong>Employment Certificate (Working Papers)</strong> from their school district before starting any job — even if it is unpaid</li>
                   <li>• Certain <strong>hazardous occupations</strong> are prohibited for workers under 18</li>
                   <li>• State laws may impose <strong>stricter requirements</strong> than federal law</li>
-                  <li>• Always check your <strong>state&rsquo;s Department of Labor</strong> for local regulations</li>
+                  <li>• Always check your <strong>state&apos;s Department of Labor</strong> for local regulations</li>
                 </ul>
               </div>
             </section>
@@ -523,7 +686,6 @@ export default function InternshipRulesPage() {
                 {[
                   { icon: '📞', title: 'Talk to a Trusted Adult', desc: 'Your parent, guardian, school counselor, or a teacher — they can help you navigate the situation and take action.' },
                   { icon: '🏫', title: 'Contact Your School', desc: 'If the internship was arranged through your school, reach out to your guidance counselor or internship coordinator.' },
-                  { icon: '📱', title: 'Report to InternPick', desc: 'Use the "Report" button on any listing, or email us at safety@internpick.com. We investigate every report.' },
                   { icon: '🏛️', title: 'File a Complaint with the DOL', desc: 'Call the Wage and Hour Division at 1-866-487-9243 or visit dol.gov/whd to file a complaint.' },
                   { icon: '🆘', title: 'National Child Labor Hotline', desc: 'For urgent concerns about child labor violations: 1-866-4-US-WAGE (1-866-487-9243), Mon–Fri 8am–5pm.' },
                   { icon: '🤝', title: 'EEOC', desc: 'Discrimination based on race, sex, disability, religion, or national origin — file at eeoc.gov or call 1-800-669-4000.' },
@@ -544,31 +706,6 @@ export default function InternshipRulesPage() {
               </div>
             </section>
 
-            <hr className="border-slate-200 dark:border-slate-800 mb-16" />
-
-            {/* ────────────── HOW INTERNPICK PROTECTS YOU ────────────── */}
-            <section id="how-internpick-helps" className="scroll-mt-24 mb-16">
-              <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-6" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>How InternPick Protects You</h2>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                {[
-                  { icon: '🤖', title: 'AI-Powered Review', desc: 'Every listing is reviewed by Google Gemini AI before publication. Unpaid roles get extra scrutiny against DOL guidelines.' },
-                  { icon: '⚠️', title: 'Real-Time Warnings', desc: 'Employers creating unpaid roles see inline guidance about DOL requirements and compliance best practices.' },
-                  { icon: '🛡️', title: 'Safety Reporting', desc: 'Students can report unsafe or suspicious listings directly through the platform.' },
-                  { icon: '🔒', title: 'Age-Appropriate Screening', desc: 'Our platform serves minors (14–18), so safety standards are extremely high.' },
-                  { icon: '📚', title: 'Educational Resources', desc: 'This guide plus links to official DOL and IRS resources help everyone make informed decisions.' },
-                  { icon: '⚡', title: 'Proactive Moderation', desc: 'AI actively flags scam indicators, predatory language, and illegal labor practices.' },
-                ].map((item, i) => (
-                  <div key={i} className="p-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30">
-                    <span className="text-2xl">{item.icon}</span>
-                    <h3 className="font-bold text-slate-900 dark:text-white text-sm mt-3 mb-1.5">{item.title}</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{item.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <hr className="border-slate-200 dark:border-slate-800 mb-16" />
 
             {/* ────────────── OFFICIAL RESOURCES ────────────── */}
             <section id="resources" className="scroll-mt-24 mb-16">

@@ -10,10 +10,71 @@ type Candidate = {
 }
 type RoleGroup = { id: string; title: string; category: string; is_active: boolean; candidates: Candidate[] }
 
+function KanbanGridColumn({ title, items, color, faded, handleReject, openDm, setProposeCandidate, getAvatarUrl }: any) {
+  const colorConfig: Record<string, { bg: string, border: string, text: string, badgeBg: string }> = {
+    slate: { bg: 'bg-slate-50/50 dark:bg-slate-900/20', border: 'border-slate-200/50 dark:border-slate-800', text: 'text-slate-700 dark:text-slate-300', badgeBg: 'bg-slate-200/60 dark:bg-slate-800' },
+    blue: { bg: 'bg-blue-50/30 dark:bg-blue-900/10', border: 'border-blue-100/50 dark:border-blue-900/30', text: 'text-blue-700 dark:text-blue-400', badgeBg: 'bg-blue-100 dark:bg-blue-900/50' },
+    purple: { bg: 'bg-purple-50/30 dark:bg-purple-900/10', border: 'border-purple-100/50 dark:border-purple-900/30', text: 'text-purple-700 dark:text-purple-400', badgeBg: 'bg-purple-100 dark:bg-purple-900/50' },
+    green: { bg: 'bg-green-50/30 dark:bg-green-900/10', border: 'border-green-100/50 dark:border-green-900/30', text: 'text-green-700 dark:text-green-400', badgeBg: 'bg-green-100 dark:bg-green-900/50' },
+    amber: { bg: 'bg-amber-50/30 dark:bg-amber-900/10', border: 'border-amber-100/50 dark:border-amber-900/30', text: 'text-amber-700 dark:text-amber-400', badgeBg: 'bg-amber-100 dark:bg-amber-900/50' },
+    teal: { bg: 'bg-teal-50/30 dark:bg-teal-900/10', border: 'border-teal-100/50 dark:border-teal-900/30', text: 'text-teal-700 dark:text-teal-500', badgeBg: 'bg-teal-100 dark:bg-teal-900/50' },
+  }
+  const colors = colorConfig[color] || colorConfig.slate;
+
+  return (
+    <div className={`flex flex-col h-full rounded-2xl border ${colors.bg} ${colors.border} ${faded ? 'opacity-60 hover:opacity-100' : ''}`}>
+      <div className={`px-2 py-3 flex flex-col items-center justify-between h-[4.5rem] lg:h-20 border-b ${colors.border} gap-1`}>
+        <h4 className={`font-bold text-[11px] lg:text-xs uppercase tracking-wider text-center line-clamp-2 leading-tight ${colors.text}`}>{title}</h4>
+        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${colors.badgeBg} ${colors.text}`}>{items.length}</span>
+      </div>
+      <div className="flex-1 p-1.5 lg:p-2 overflow-y-auto overflow-x-hidden hide-scrollbar flex flex-col gap-2 relative">
+        {items.length === 0 ? (
+          <div className="py-4 text-center text-[10px] text-slate-400 border border-dashed border-slate-200/50 dark:border-slate-800 rounded-xl">Empty</div>
+        ) : (
+          items.map((c: any) => (
+            <MiniCandidateCard key={c.interestId} c={c} handleReject={handleReject} openDm={openDm} setProposeCandidate={setProposeCandidate} getAvatarUrl={getAvatarUrl} currentStage={title} />
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
+function MiniCandidateCard({ c, handleReject, openDm, setProposeCandidate, getAvatarUrl, currentStage }: any) {
+  return (
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 flex flex-col gap-2 hover:shadow-md transition-shadow relative group">
+      <div className="flex flex-col xl:flex-row items-center xl:items-start gap-2 text-center xl:text-left">
+        <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-700 mx-auto xl:mx-0">
+          <img src={getAvatarUrl(c.name)} alt={c.name} className="w-full h-full object-cover" />
+        </div>
+        <div className="min-w-0 flex-1 w-full">
+          <h4 className="font-bold text-xs text-slate-900 dark:text-white truncate" title={c.name}>{c.name.split(' ')[0]}</h4>
+          {c.matchScore !== undefined && (
+            <div className={`mt-0.5 text-[9px] font-black inline-block px-1 rounded-sm border ${
+              c.matchScore >= 80 ? 'text-amber-600 border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800' : 'text-slate-500 border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700'
+            }`}>
+              {c.matchScore}% 
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {currentStage !== 'Declined' && (
+        <div className="flex gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute inset-x-2 bottom-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm pt-1 pb-1">
+          <button onClick={() => openDm(c)} className="flex-1 py-1 text-[10px] font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/30 rounded" title="Message">💬</button>
+          <button onClick={() => setProposeCandidate(c)} className="flex-1 py-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded" title="Change Status">⚙️</button>
+          <button onClick={() => handleReject(c)} className="flex-1 py-1 text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-900/30 rounded" title="Decline">✕</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function CandidatesPage() {
   const [roleGroups, setRoleGroups] = useState<RoleGroup[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [expandedRole, setExpandedRole] = useState<string | null>(null)
+  const [mobileActiveTab, setMobileActiveTab] = useState<string>('Applied')
 
   // DM state
   const [dmCandidate, setDmCandidate] = useState<Candidate | null>(null)
@@ -154,95 +215,60 @@ export default function CandidatesPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-4 overflow-x-auto pb-6 snap-x hide-scrollbar">
-                  {/* Column 1: Applied */}
-                  <div className="flex-none w-[300px] snap-start bg-slate-50/80 dark:bg-slate-900/40 rounded-2xl p-4 border border-slate-200/60 dark:border-slate-800 flex flex-col gap-3">
-                    <div className="flex justify-between items-center mb-1 px-1">
-                      <h4 className="font-bold text-sm text-slate-700 dark:text-slate-300">Applied</h4>
-                      <span className="px-2 py-0.5 bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold rounded-full">{appliedCandidates.length}</span>
-                    </div>
-                    {appliedCandidates.length === 0 ? (
-                      <div className="py-6 text-center text-xs text-slate-400 border border-dashed border-slate-300 dark:border-slate-700/50 rounded-xl">No new applicants</div>
-                    ) : (
-                      appliedCandidates.map(c => <CandidateCard key={c.interestId} c={c} handleReject={handleReject} openDm={openDm} setProposeCandidate={setProposeCandidate} getAvatarUrl={getAvatarUrl} currentStage="Applied" />)
-                    )}
+                {/* Mobile Dropdown View (hidden on md and up) */}
+                <div className="md:hidden flex flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Stage:</label>
+                    <select
+                      value={mobileActiveTab}
+                      onChange={(e) => setMobileActiveTab(e.target.value)}
+                      className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-brand-500 outline-none"
+                    >
+                      <option value="Declined">Declined ({declinedCandidates.length})</option>
+                      <option value="Applied">Applied ({appliedCandidates.length})</option>
+                      <option value="Short Listed">Short Listed ({shortListedCandidates.length})</option>
+                      <option value="Offered">Offered ({offeredCandidates.length})</option>
+                      <option value="Accepted">Accepted ({acceptedCandidates.length})</option>
+                      <option value="Onboarding">Onboarding ({onboardingCandidates.length})</option>
+                      <option value="Ready to Start">Ready to Start ({readyCandidates.length})</option>
+                    </select>
                   </div>
+                  
+                  <div className="flex flex-col gap-3">
+                    {(() => {
+                      const activeCandidates = 
+                        mobileActiveTab === 'Applied' ? appliedCandidates :
+                        mobileActiveTab === 'Short Listed' ? shortListedCandidates :
+                        mobileActiveTab === 'Offered' ? offeredCandidates :
+                        mobileActiveTab === 'Accepted' ? acceptedCandidates :
+                        mobileActiveTab === 'Onboarding' ? onboardingCandidates :
+                        mobileActiveTab === 'Ready to Start' ? readyCandidates :
+                        declinedCandidates;
+                        
+                      if (activeCandidates.length === 0) {
+                        return (
+                          <div className="py-12 text-center text-sm text-slate-400 border border-dashed border-slate-300 dark:border-slate-800 rounded-2xl">
+                            No candidates in {mobileActiveTab}
+                          </div>
+                        )
+                      }
+                      
+                      return activeCandidates.map((c: any) => (
+                        <CandidateCard key={c.interestId} c={c} handleReject={handleReject} openDm={openDm} setProposeCandidate={setProposeCandidate} getAvatarUrl={getAvatarUrl} currentStage={mobileActiveTab} />
+                      ))
+                    })()}
+                  </div>
+                </div>
 
-                  {/* Column 2: Short Listed */}
-                  <div className="flex-none w-[300px] snap-start bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl p-4 border border-blue-100/60 dark:border-blue-900/30 flex flex-col gap-3">
-                    <div className="flex justify-between items-center mb-1 px-1">
-                      <h4 className="font-bold text-sm text-blue-700 dark:text-blue-400">Short Listed</h4>
-                      <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 text-xs font-bold rounded-full">{shortListedCandidates.length}</span>
-                    </div>
-                    {shortListedCandidates.length === 0 ? (
-                      <div className="py-6 text-center text-xs text-blue-600/50 dark:text-blue-500/30 border border-dashed border-blue-200 dark:border-blue-900/50 rounded-xl">None short listed</div>
-                    ) : (
-                      shortListedCandidates.map(c => <CandidateCard key={c.interestId} c={c} handleReject={handleReject} openDm={openDm} setProposeCandidate={setProposeCandidate} getAvatarUrl={getAvatarUrl} currentStage="Short Listed" />)
-                    )}
-                  </div>
-
-                  {/* Column 3: Offered */}
-                  <div className="flex-none w-[300px] snap-start bg-purple-50/50 dark:bg-purple-900/10 rounded-2xl p-4 border border-purple-100/60 dark:border-purple-900/30 flex flex-col gap-3">
-                    <div className="flex justify-between items-center mb-1 px-1">
-                      <h4 className="font-bold text-sm text-purple-700 dark:text-purple-400">Offered</h4>
-                      <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-400 text-xs font-bold rounded-full">{offeredCandidates.length}</span>
-                    </div>
-                    {offeredCandidates.length === 0 ? (
-                      <div className="py-6 text-center text-xs text-purple-600/50 dark:text-purple-500/30 border border-dashed border-purple-200 dark:border-purple-900/50 rounded-xl">No offers extended</div>
-                    ) : (
-                      offeredCandidates.map(c => <CandidateCard key={c.interestId} c={c} handleReject={handleReject} openDm={openDm} setProposeCandidate={setProposeCandidate} getAvatarUrl={getAvatarUrl} currentStage="Offered" />)
-                    )}
-                  </div>
-
-                  {/* Column 4: Accepted (Hired) */}
-                  <div className="flex-none w-[300px] snap-start bg-green-50/50 dark:bg-green-900/10 rounded-2xl p-4 border border-green-100/60 dark:border-green-900/30 flex flex-col gap-3">
-                    <div className="flex justify-between items-center mb-1 px-1">
-                      <h4 className="font-bold text-sm text-green-700 dark:text-green-400">Accepted</h4>
-                      <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400 text-xs font-bold rounded-full">{acceptedCandidates.length}</span>
-                    </div>
-                    {acceptedCandidates.length === 0 ? (
-                      <div className="py-6 text-center text-xs text-green-600/50 dark:text-green-500/30 border border-dashed border-green-200 dark:border-green-900/50 rounded-xl">Waiting for acceptance</div>
-                    ) : (
-                      acceptedCandidates.map(c => <CandidateCard key={c.interestId} c={c} handleReject={handleReject} openDm={openDm} setProposeCandidate={setProposeCandidate} getAvatarUrl={getAvatarUrl} currentStage="Accepted" />)
-                    )}
-                  </div>
-
-                  {/* Column 5: Onboarding */}
-                  <div className="flex-none w-[300px] snap-start bg-amber-50/50 dark:bg-amber-900/10 rounded-2xl p-4 border border-amber-100/60 dark:border-amber-900/30 flex flex-col gap-3">
-                    <div className="flex justify-between items-center mb-1 px-1">
-                      <h4 className="font-bold text-sm text-amber-700 dark:text-amber-400">Onboarding</h4>
-                      <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 text-xs font-bold rounded-full">{onboardingCandidates.length}</span>
-                    </div>
-                    {onboardingCandidates.length === 0 ? (
-                      <div className="py-6 text-center text-xs text-amber-600/50 dark:text-amber-500/30 border border-dashed border-amber-200 dark:border-amber-900/50 rounded-xl">No one onboarding</div>
-                    ) : (
-                      onboardingCandidates.map(c => <CandidateCard key={c.interestId} c={c} handleReject={handleReject} openDm={openDm} setProposeCandidate={setProposeCandidate} getAvatarUrl={getAvatarUrl} currentStage="Onboarding" />)
-                    )}
-                  </div>
-
-                  {/* Column 6: Ready to Start */}
-                  <div className="flex-none w-[300px] snap-start bg-teal-50/50 dark:bg-teal-900/10 rounded-2xl p-4 border border-teal-100/60 dark:border-teal-900/30 flex flex-col gap-3">
-                    <div className="flex justify-between items-center mb-1 px-1">
-                      <h4 className="font-bold text-sm text-teal-700 dark:text-teal-500">Ready to Start</h4>
-                      <span className="px-2 py-0.5 bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-400 text-xs font-bold rounded-full">{readyCandidates.length}</span>
-                    </div>
-                    {readyCandidates.length === 0 ? (
-                      <div className="py-6 text-center text-xs text-teal-600/50 dark:text-teal-500/30 border border-dashed border-teal-200 dark:border-teal-900/50 rounded-xl">No one ready yet</div>
-                    ) : (
-                      readyCandidates.map(c => <CandidateCard key={c.interestId} c={c} handleReject={handleReject} openDm={openDm} setProposeCandidate={setProposeCandidate} getAvatarUrl={getAvatarUrl} currentStage="Ready to Start" />)
-                    )}
-                  </div>
-
-                  {/* Column 7: Declined */}
-                  <div className="flex-none w-[300px] snap-start bg-slate-50/50 dark:bg-slate-900/20 rounded-2xl p-4 border border-slate-200/50 dark:border-slate-800 flex flex-col gap-3 opacity-60 hover:opacity-100 transition-opacity mx-4">
-                    <div className="flex justify-between items-center mb-1 px-1">
-                      <h4 className="font-bold text-sm text-slate-500 dark:text-slate-400">Declined</h4>
-                      <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-500 text-xs font-bold rounded-full">{declinedCandidates.length}</span>
-                    </div>
-                    {declinedCandidates.length > 0 && (
-                      declinedCandidates.map(c => <CandidateCard key={c.interestId} c={c} handleReject={handleReject} openDm={openDm} setProposeCandidate={setProposeCandidate} getAvatarUrl={getAvatarUrl} currentStage="Declined" />)
-                    )}
-                  </div>
+                {/* Desktop Grid View (hidden below md, 7 columns) */}
+                <div className="hidden md:grid grid-cols-7 gap-1 lg:gap-2 xl:gap-3 overflow-x-hidden min-h-[60vh] pb-8">
+                  <KanbanGridColumn title="Declined" items={declinedCandidates} color="slate" faded handleReject={handleReject} openDm={openDm} setProposeCandidate={setProposeCandidate} getAvatarUrl={getAvatarUrl} />
+                  <KanbanGridColumn title="Applied" items={appliedCandidates} color="slate" handleReject={handleReject} openDm={openDm} setProposeCandidate={setProposeCandidate} getAvatarUrl={getAvatarUrl} />
+                  <KanbanGridColumn title="Short Listed" items={shortListedCandidates} color="blue" handleReject={handleReject} openDm={openDm} setProposeCandidate={setProposeCandidate} getAvatarUrl={getAvatarUrl} />
+                  <KanbanGridColumn title="Offered" items={offeredCandidates} color="purple" handleReject={handleReject} openDm={openDm} setProposeCandidate={setProposeCandidate} getAvatarUrl={getAvatarUrl} />
+                  <KanbanGridColumn title="Accepted" items={acceptedCandidates} color="green" handleReject={handleReject} openDm={openDm} setProposeCandidate={setProposeCandidate} getAvatarUrl={getAvatarUrl} />
+                  <KanbanGridColumn title="Onboarding" items={onboardingCandidates} color="amber" handleReject={handleReject} openDm={openDm} setProposeCandidate={setProposeCandidate} getAvatarUrl={getAvatarUrl} />
+                  <KanbanGridColumn title="Ready to Start" items={readyCandidates} color="teal" handleReject={handleReject} openDm={openDm} setProposeCandidate={setProposeCandidate} getAvatarUrl={getAvatarUrl} />
                 </div>
               </div>
             )
@@ -472,3 +498,5 @@ function CandidateCard({ c, handleReject, openDm, setProposeCandidate, getAvatar
     </div>
   )
 }
+
+
