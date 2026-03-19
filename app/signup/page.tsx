@@ -177,7 +177,35 @@ export default function SignupPage() {
                   </button>
                 </div>
                 {role === 'educator' && (
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">For CTE coordinators, teachers, and counselors</p>
+                  <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-800/30">
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mb-1.5">For career &amp; technical education coordinators, teachers &amp; counselors:</p>
+                    <ul className="text-xs text-emerald-600/80 dark:text-emerald-400/80 space-y-1">
+                      <li>✅ Create unlimited practicum programs</li>
+                      <li>✅ Invite students via email or CSV</li>
+                      <li>✅ Track hours, journals &amp; evaluations</li>
+                      <li>✅ FERPA-compliant data handling</li>
+                    </ul>
+                  </div>
+                )}
+                {role === 'employer' && (
+                  <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-800/30">
+                    <p className="text-xs text-blue-600 dark:text-blue-400 font-bold mb-1.5">Host practicum students at your business:</p>
+                    <ul className="text-xs text-blue-600/80 dark:text-blue-400/80 space-y-1">
+                      <li>✅ Zero wage liability — school credit only</li>
+                      <li>✅ School provides insurance coverage</li>
+                      <li>✅ Shape the next generation in your community</li>
+                    </ul>
+                  </div>
+                )}
+                {role === 'student' && (
+                  <div className="mt-2 p-3 bg-brand-50 dark:bg-brand-900/10 rounded-xl border border-brand-100 dark:border-brand-800/30">
+                    <p className="text-xs text-brand-600 dark:text-brand-400 font-bold mb-1.5">Your school invites you — here&apos;s what you get:</p>
+                    <ul className="text-xs text-brand-600/80 dark:text-brand-400/80 space-y-1">
+                      <li>✅ Log hours with employer approval</li>
+                      <li>✅ Write weekly reflection journals</li>
+                      <li>✅ Build your career interest profile</li>
+                    </ul>
+                  </div>
                 )}
               </div>
 

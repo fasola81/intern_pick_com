@@ -185,11 +185,11 @@ export function Navbar() {
               </div>
             ) : (
               <>
-                <Link href="/#how-it-works" className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors px-2">
+                <Link href="/how-it-works" className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors px-2">
                   How it Works
                 </Link>
                 <Link href="/internship-rules" className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors px-2">
-                  WBL Resources
+                  Internship Wiki
                 </Link>
                 <Link href="/about" className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors px-2">
                   About Us
@@ -404,11 +404,11 @@ export function Navbar() {
               })
             ) : (
               <>
-                <Link href="/#how-it-works" className="px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">
+                <Link href="/how-it-works" className="px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">
                   How it Works
                 </Link>
                 <Link href="/internship-rules" className="px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">
-                  WBL Resources
+                  Internship Wiki
                 </Link>
                 <Link href="/about" className="px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">
                   About Us

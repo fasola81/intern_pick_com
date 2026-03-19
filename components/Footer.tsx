@@ -81,13 +81,13 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/#how-it-works" className="text-slate-400 hover:text-brand-400 transition-colors">
+                <Link href="/how-it-works" className="text-slate-400 hover:text-brand-400 transition-colors">
                   How it Works
                 </Link>
               </li>
               <li>
                 <Link href="/internship-rules" className="text-slate-400 hover:text-brand-400 transition-colors">
-                  WBL Resources
+                  Internship Wiki
                 </Link>
               </li>
               <li>
@@ -100,8 +100,17 @@ export function Footer() {
           </div>
         </div>
 
+        {/* Trust Badges */}
+        <div className="pb-6 mb-2 border-b border-slate-800 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+          <span className="flex items-center gap-1.5">🛡️ FERPA Compliant</span>
+          <span className="flex items-center gap-1.5">⚖️ Dept. of Labor Protected</span>
+          <span className="flex items-center gap-1.5">👶 Children&apos;s Privacy Safe</span>
+          <span className="flex items-center gap-1.5">🔒 256-bit SSL</span>
+          <span className="flex items-center gap-1.5">🤖 AI Moderated</span>
+        </div>
+
         {/* Bottom Bar */}
-        <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-400">
+        <div className="pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-400">
           <p>© {currentYear} InternPick.com. School-credit work-based learning.</p>
           <div className="flex flex-wrap justify-center md:justify-end items-center gap-4 md:gap-6">
             <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
