@@ -1,13 +1,24 @@
 import { Navbar } from "@/components/Navbar"
 import { Button } from "@/components/ui/Button"
 import Link from "next/link"
+import type { Metadata } from 'next'
 
+export const metadata: Metadata = {
+  title: "About Us | InternPick",
+  description: "Learn about InternPick, a marketplace connecting ambitious high school students with local businesses for incredible internship opportunities.",
+  openGraph: {
+    title: "About Us | InternPick",
+    description: "Learn about InternPick, a marketplace connecting ambitious high school students with local businesses for incredible internship opportunities.",
+    url: "https://www.internpick.com/about",
+    images: ["/images/hero_background.png"],
+  },
+}
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col">
       <Navbar />
       
-      <main className="flex-grow pt-32 pb-24 md:pt-40 md:pb-32 px-4 max-w-5xl mx-auto w-full">
+      <main className="flex-grow pt-4 pb-24 md:pt-4 md:pb-32 px-4 max-w-5xl mx-auto w-full">
         {/* Header Section */}
         <div className="text-center mb-16 animate-fade-in-up">
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-6">

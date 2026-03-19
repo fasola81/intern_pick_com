@@ -16,8 +16,47 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "InternPick - Match With the Best Local Talent Fast",
-  description: "The premier platform connecting ambitious high school students with local businesses.",
+  metadataBase: new URL("https://www.internpick.com"),
+  title: {
+    default: "InternPick.com - Match With the Best Local Talent Fast",
+    template: "%s | InternPick",
+  },
+  description: "The premier platform connecting ambitious high school students with local businesses in Springfield, NJ and surrounding areas.",
+  keywords: [
+    "high school internships",
+    "local talent",
+    "student jobs",
+    "mentorship",
+    "Springfield NJ internships",
+    "InternPick",
+  ],
+  authors: [{ name: "InternPick Team" }],
+  creator: "InternPick",
+  openGraph: {
+    type: "website",
+    url: "https://www.internpick.com",
+    title: "InternPick.com - Match With the Best Local Talent Fast",
+    description: "The premier platform connecting ambitious high school students with local businesses.",
+    siteName: "InternPick",
+    images: [
+      {
+        url: "/images/hero_background.png",
+        width: 1200,
+        height: 630,
+        alt: "InternPick - Match With the Best Local Talent Fast",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "InternPick.com - Match With the Best Local Talent Fast",
+    description: "The premier platform connecting ambitious high school students with local businesses.",
+    images: ["/images/hero_background.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
@@ -26,10 +65,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
+        suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            var theme = localStorage.getItem('theme') || 'auto';
+            if (theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+              document.documentElement.classList.add('dark');
+            } else {
+              document.documentElement.classList.remove('dark');
+            }
+          })();
+        `}} />
         <div className="flex-grow">
           {children}
         </div>

@@ -1,11 +1,13 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Navbar } from '@/components/Navbar'
 import { Button } from '@/components/ui/Button'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createOpportunity } from '@/app/actions'
+import { createOpportunity, polishCompanyAbout, moderateOpportunityContent, generateAndUploadRoleImageAction } from '@/app/actions'
+import { STATE_MINIMUM_WAGES, FEDERAL_MINIMUM_WAGE, getMinimumWageByAbbr } from '@/lib/minimumWages'
+import { PREBUILT_AVATARS } from '@/lib/prebuilt-avatars'
 
 type QuestionType = 'open_ended' | 'multiple_choice' | 'multiple_selection'
 
@@ -19,16 +21,57 @@ export default function CreateRolePage() {
   const router = useRouter()
   const [isGenerating, setIsGenerating] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
+  const [isChecking, setIsChecking] = useState(false)
+  const [showReview, setShowReview] = useState(false)
+  const [moderationError, setModerationError] = useState<string | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(PREBUILT_AVATARS[0])
+  const [previewAvatarUrl, setPreviewAvatarUrl] = useState<string | null>(null)
+  const [generationError, setGenerationError] = useState<string | null>(null)
+  const [showFullPreviewModal, setShowFullPreviewModal] = useState<string | null>(null)
+  const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false)
   const [description, setDescription] = useState("")
   const [title, setTitle] = useState("")
   const [category, setCategory] = useState("")
   const [compensation, setCompensation] = useState<'paid' | 'unpaid' | 'credit'>('paid')
-  const [hoursPerWeek, setHoursPerWeek] = useState("")
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
-  const [questions, setQuestions] = useState<PrescreenQuestion[]>([])
+  const [selectedState, setSelectedState] = useState('')
+  const [hourlyRate, setHourlyRate] = useState('')
+  const [hoursPerWeek, setHoursPerWeek] = useState("10")
+  const [duration, setDuration] = useState("")
+  const [questions, setQuestions] = useState<PrescreenQuestion[]>([{ text: 'Why are you interested in this role?', type: 'open_ended', options: ['', ''] }])
   const [requireVideo, setRequireVideo] = useState(false)
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [minAge, setMinAge] = useState('')
+  const [showDOLModal, setShowDOLModal] = useState(false)
+  const [dolChecks, setDolChecks] = useState<boolean[]>([false, false, false, false, false, false, false])
+
+  const [requireTeacherRef, setRequireTeacherRef] = useState(false)
+  const [selectedPerks, setSelectedPerks] = useState<string[]>([])
+  const [perksSearch, setPerksSearch] = useState('')
+  const [expandedCategory, setExpandedCategory] = useState<number | null>(0)
+  const [customPerkInput, setCustomPerkInput] = useState('')
+
+  const PERKS_CATEGORIES = [
+    {
+      name: '🚀 Career Boost',
+      short: 'Career',
+      items: ['Letter of Recommendation','1-on-1 Mentorship','Portfolio / Capstone Project','Resume & LinkedIn Help','Mock Interview Practice','College Application Support','Job Shadowing Executives','Industry Networking Events','Future Job Opportunity','Career Coaching Sessions']
+    },
+    {
+      name: '💻 Skills You\'ll Learn',
+      short: 'Skills',
+      items: ['Social Media Marketing','Graphic Design (Canva)','Video Editing & Production','AI & Prompt Engineering','Web Development Basics','Photography & Visual Arts','Data Analysis & Excel','Content Writing & Blogging','SEO & Digital Marketing','CRM & Business Software']
+    },
+    {
+      name: '🏠 Work-Life Fit',
+      short: 'Flexibility',
+      items: ['Flexible After-School Hours','Remote Work Option','Hybrid Schedule','Casual Dress Code','Small Friendly Team','Creative Freedom','Hands-On Real Projects','Collaborative Environment','Outdoor & Active Work','Community-Focused Role']
+    },
+    {
+      name: '🎁 Perks & Rewards',
+      short: 'Perks',
+      items: ['Paid Position','End-of-Program Stipend','School Credit Eligible','Free Meals & Snacks','Company Swag & Apparel','Laptop or Equipment Provided','Team Outings & Events','Performance Bonus','Transportation Allowance','Employee Discounts']
+    }
+  ]
   
   const availableTags = [
     "Social Media", "Communication", "Canva", "Excel", "Data Entry", 
@@ -82,34 +125,107 @@ export default function CreateRolePage() {
     setQuestions(newQuestions)
   }
 
-  const handleAIGenerate = () => {
+  const handleAIGenerate = async () => {
+    if (!description.trim()) return
     setIsGenerating(true)
-    // Placeholder — will be connected to AI in production
-    setTimeout(() => {
-      setDescription("Describe the role responsibilities, skills the intern will develop, and what a typical day looks like. Be specific to attract the right candidates.")
-      setIsGenerating(false)
-    }, 1500)
+    try {
+      const result = await polishCompanyAbout({ text: description, companyName: title || 'Internship', industry: category || 'internship' })
+      if (result.polished) {
+        setDescription(result.polished)
+      }
+    } catch (err) {
+      console.error('[AI] Polish failed:', err)
+    }
+    setIsGenerating(false)
   }
 
   const [workSetting, setWorkSetting] = useState<'onsite' | 'hybrid' | 'remote'>('onsite')
 
-  const handlePublish = async () => {
+  const handleStateChange = (abbr: string) => {
+    setSelectedState(abbr)
+    if (abbr && compensation === 'paid') {
+      const stateData = getMinimumWageByAbbr(abbr)
+      if (stateData) {
+        setHourlyRate(stateData.rate.toFixed(2))
+      }
+    }
+  }
+
+  const handleCompensationChange = (val: 'paid' | 'unpaid' | 'credit') => {
+    setCompensation(val)
+    if (val === 'paid' && selectedState) {
+      const stateData = getMinimumWageByAbbr(selectedState)
+      if (stateData) {
+        setHourlyRate(stateData.rate.toFixed(2))
+      }
+    }
+  }
+
+  const handleReviewClick = async () => {
+    // If unpaid, show DOL acknowledgment first
+    if (compensation === 'unpaid') {
+      setDolChecks([false, false, false, false, false, false, false])
+      setShowDOLModal(true)
+      return
+    }
+    await proceedToReview()
+  }
+
+  const proceedToReview = async () => {
+    setIsChecking(true)
+    setModerationError(null)
+    try {
+      const modResult = await moderateOpportunityContent({
+        title,
+        description,
+        category,
+        compensation,
+        perks: selectedPerks,
+        workSetting,
+      })
+      if (modResult.safe) {
+        setShowReview(true)
+      } else {
+        setModerationError(modResult.reason || 'Your listing was flagged by our safety system. Please review and update your content.')
+      }
+    } catch (err) {
+      console.error('[Moderation] Error:', err)
+      // If moderation fails, allow through to review
+      setShowReview(true)
+    }
+    setIsChecking(false)
+  }
+
+  const DOL_FACTORS = [
+    { title: 'No Expectation of Compensation', desc: 'Both I and the intern understand there is no expectation of payment.' },
+    { title: 'Educational Benefit', desc: 'The training is similar to what would be given in an educational environment.' },
+    { title: 'Tied to Formal Education', desc: 'The internship is connected to the intern\'s coursework or academic credit.' },
+    { title: 'Accommodates Academic Calendar', desc: 'The schedule accommodates the intern\'s school commitments.' },
+    { title: 'Limited Duration', desc: 'The internship has a clear start and end date.' },
+    { title: 'Does Not Displace Employees', desc: 'The intern complements — not replaces — paid staff.' },
+    { title: 'No Job Guarantee', desc: 'Both parties understand the internship does not guarantee a paid job.' },
+  ]
+
+  const handleConfirmPublish = async () => {
     setIsPublishing(true)
     const result = await createOpportunity({
       title,
       category,
       compensation,
-      hourlyRate: compensation === 'paid' ? parseFloat(hoursPerWeek) || undefined : undefined,
+      hourlyRate: compensation === 'paid' ? parseFloat(hourlyRate) || undefined : undefined,
       hoursPerWeek: parseInt(hoursPerWeek) || undefined,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
+      startDate: undefined,
+      endDate: undefined,
       workSetting,
       requiredSkills: selectedTags,
       description,
+      avatarUrl,
     })
     console.log('[Create Role] Result:', result)
     router.push('/employer')
   }
+
+  const stateMinWage = selectedState ? getMinimumWageByAbbr(selectedState) : null
 
   return (
     <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 flex flex-col">
@@ -170,48 +286,147 @@ export default function CreateRolePage() {
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Compensation *</label>
-                    <select value={compensation} onChange={(e) => setCompensation(e.target.value as 'paid' | 'unpaid' | 'credit')} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all appearance-none text-slate-900 dark:text-white">
-                      <option value="paid">Paid (Hourly)</option>
-                      <option value="unpaid">Unpaid (Experience)</option>
-                      <option value="credit">School Credit</option>
+                    <select value={compensation} onChange={(e) => handleCompensationChange(e.target.value as 'paid' | 'unpaid' | 'credit')} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all appearance-none text-slate-900 dark:text-white">
+                      <option value="paid">💰 Paid (Hourly)</option>
+                      <option value="unpaid">🎓 Unpaid (Experience)</option>
+                      <option value="credit">📚 School Credit</option>
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Hours/Week</label>
-                    <input 
-                      type="number" 
-                      value={hoursPerWeek}
-                      onChange={(e) => setHoursPerWeek(e.target.value)}
-                      placeholder="e.g. 10" 
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all text-slate-900 dark:text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Start Date</label>
-                    <input 
-                      type="date" 
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all text-slate-700 dark:text-slate-300"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">End Date</label>
-                    <input 
-                      type="date" 
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all text-slate-700 dark:text-slate-300"
-                    />
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">State *</label>
+                    <select
+                      value={selectedState}
+                      onChange={(e) => handleStateChange(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all appearance-none text-slate-900 dark:text-white"
+                    >
+                      <option value="">Select your state</option>
+                      {STATE_MINIMUM_WAGES.map(s => (
+                        <option key={s.abbr} value={s.abbr}>{s.state}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
+                {/* Hourly Rate (visible for paid) */}
+                {compensation === 'paid' && (
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Hourly Rate ($) *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min={stateMinWage?.rate || FEDERAL_MINIMUM_WAGE}
+                        value={hourlyRate}
+                        onChange={(e) => setHourlyRate(e.target.value)}
+                        placeholder={`e.g. ${stateMinWage?.rate.toFixed(2) || FEDERAL_MINIMUM_WAGE.toFixed(2)}`}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all text-slate-900 dark:text-white"
+                      />
+                      {stateMinWage && (
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {stateMinWage.state} minimum wage: <strong className="text-slate-700 dark:text-slate-300">${stateMinWage.rate.toFixed(2)}/hr</strong>
+                          {stateMinWage.note && <span className="text-slate-400 dark:text-slate-500"> ({stateMinWage.note})</span>}
+                        </p>
+                      )}
+                      {!selectedState && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400">Select a state above to auto-fill the minimum wage.</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Hours/Week</label>
+                      <input 
+                        type="number" 
+                        value={hoursPerWeek}
+                        onChange={(e) => setHoursPerWeek(e.target.value)}
+                        placeholder="e.g. 10" 
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Duration</label>
+                      <select
+                        value={duration}
+                        onChange={(e) => setDuration(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all appearance-none text-slate-900 dark:text-white"
+                      >
+                        <option value="">Select Duration</option>
+                        <option value="1">1 Month</option>
+                        <option value="2">2 Months</option>
+                        <option value="3">3 Months</option>
+                        <option value="4">4 Months</option>
+                        <option value="6">6 Months</option>
+                        <option value="9">9 Months</option>
+                        <option value="12">12 Months</option>
+                        <option value="ongoing">Ongoing</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Hours/Duration for non-paid */}
+                {compensation !== 'paid' && (
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Hours/Week</label>
+                      <input 
+                        type="number" 
+                        value={hoursPerWeek}
+                        onChange={(e) => setHoursPerWeek(e.target.value)}
+                        placeholder="e.g. 10" 
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Duration</label>
+                      <select
+                        value={duration}
+                        onChange={(e) => setDuration(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all appearance-none text-slate-900 dark:text-white"
+                      >
+                        <option value="">Select Duration</option>
+                        <option value="1">1 Month</option>
+                        <option value="2">2 Months</option>
+                        <option value="3">3 Months</option>
+                        <option value="4">4 Months</option>
+                        <option value="6">6 Months</option>
+                        <option value="9">9 Months</option>
+                        <option value="12">12 Months</option>
+                        <option value="ongoing">Ongoing</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Unpaid DOL Warning */}
+                {compensation === 'unpaid' && (
+                  <div className="mt-4 p-5 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30">
+                    <div className="flex gap-3">
+                      <span className="text-xl flex-shrink-0">⚠️</span>
+                      <div>
+                        <p className="text-sm font-bold text-amber-800 dark:text-amber-300 mb-2">DOL Compliance Required for Unpaid Internships</p>
+                        <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed mb-3">
+                          Under the Department of Labor&apos;s <strong>Primary Beneficiary Test</strong>, unpaid internships at for-profit businesses must primarily benefit the intern. Your role description should emphasize:
+                        </p>
+                        <ul className="text-xs text-amber-700 dark:text-amber-400 space-y-1.5 mb-3">
+                          <li className="flex gap-2"><span className="font-bold">•</span>What the intern will <strong>learn</strong> (skills, training, mentorship)</li>
+                          <li className="flex gap-2"><span className="font-bold">•</span>How the experience ties to their <strong>education or career development</strong></li>
+                          <li className="flex gap-2"><span className="font-bold">•</span>That the intern <strong>does not replace</strong> a paid employee&apos;s duties</li>
+                          <li className="flex gap-2"><span className="font-bold">•</span>Supervision and <strong>mentorship structure</strong></li>
+                        </ul>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-amber-600 dark:text-amber-500 font-medium">🤖 Our AI will review your description for compliance before publishing.</span>
+                          <a href="/internship-rules" target="_blank" className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline whitespace-nowrap">Learn more →</a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2 pt-2">
                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Work Setting *</label>
-                   <div className="flex flex-wrap gap-3">
+                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                      <button
                        onClick={() => setWorkSetting('onsite')}
                        className={`flex items-center gap-2 px-5 py-3 rounded-xl border text-sm font-bold transition-all ${
@@ -245,51 +460,129 @@ export default function CreateRolePage() {
                    </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6 pt-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Business Unit</label>
-                    <select className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all appearance-none text-slate-900 dark:text-white">
-                      <option value="">Select Department (Optional)</option>
-                      <option value="marketing">Marketing Team</option>
-                      <option value="operations">Store Operations</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Hiring Manager</label>
-                    <select className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all appearance-none text-slate-900 dark:text-white">
-                      <option value="">Select Manager</option>
-                    </select>
-                  </div>
-                </div>
               </div>
 
               <div className="h-px bg-slate-200 dark:bg-slate-800 w-full"></div>
 
-              {/* Skills & Tagging */}
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Required Skills</h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Select the baseline skills a student should possess. This helps our Match Engine connect you with the right candidates.</p>
+              {/* Role Avatar */}
+              <div className="space-y-6 relative">
+                <div className="flex justify-between items-end">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Role Avatar</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Choose an image to represent this role, or generate a custom one.</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    {previewAvatarUrl && (
+                      <div className="flex flex-col items-end animate-fade-in-up">
+                        <span className="text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-wider mb-1">✨ Preview Ready! Click to select</span>
+                        <button 
+                          type="button"
+                          onClick={() => { setAvatarUrl(previewAvatarUrl); setPreviewAvatarUrl(null) }}
+                          className="w-24 h-24 rounded-xl overflow-hidden border-2 border-brand-500 shadow-lg hover:scale-105 transition-transform group relative cursor-pointer"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={previewAvatarUrl} alt="Preview" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-brand-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-white font-bold text-xs">Select</span>
+                          </div>
+                        </button>
+                      </div>
+                    )}
+                    {generationError && (
+                      <div className="text-xs font-bold text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-800 animate-fade-in">
+                        {generationError}
+                      </div>
+                    )}
+                    <button 
+                      onClick={async () => {
+                        if (!title || !description) return alert('Please enter a Title and Description first.')
+                        setIsGeneratingAvatar(true)
+                        setGenerationError(null)
+                        try {
+                          const res = await generateAndUploadRoleImageAction({ title, category, description })
+                          if (res.url) {
+                            setPreviewAvatarUrl(res.url)
+                          } else {
+                            setGenerationError(res.error || 'Failed to generate.')
+                          }
+                        } catch (err) { 
+                          console.error(err)
+                          setGenerationError('Failed to generate avatar.')
+                        }
+                        setIsGeneratingAvatar(false)
+                      }}
+                      disabled={isGeneratingAvatar || !title}
+                      className="hidden sm:flex items-center gap-2 px-4 py-2 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 rounded-xl text-sm font-bold hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors border border-brand-200 dark:border-brand-800/50 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {isGeneratingAvatar ? (
+                        <span className="flex items-center gap-2">
+                          <span className="w-4 h-4 rounded-full border-2 border-brand-500 border-t-transparent animate-spin"></span>
+                          Generating...
+                        </span>
+                      ) : (
+                        <>
+                          <span>✨</span> Generate Unique Avatar with AI
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
                 
-                <div className="flex flex-wrap gap-2">
-                  {availableTags.map((tag) => {
-                    const isSelected = selectedTags.includes(tag);
-                    return (
+                {/* Prebuilt Grid & Selection Preview */}
+                <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3 max-h-60 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 custom-scrollbar relative">
+                  {PREBUILT_AVATARS.map((url, i) => (
+                    <div key={i} className="relative aspect-square rounded-xl overflow-visible group">
                       <button
-                        key={tag}
-                        onClick={() => toggleTag(tag)}
-                        className={`px-4 py-2 rounded-full text-sm font-bold border transition-all ${
-                          isSelected 
-                            ? 'bg-brand-50 border-brand-300 text-brand-700 dark:bg-brand-900/40 dark:border-brand-500/50 dark:text-brand-300 shadow-sm' 
-                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 hover:border-slate-300'
+                        onClick={() => setAvatarUrl(url)}
+                        className={`w-full h-full rounded-xl overflow-hidden border-2 transition-all block ${
+                          avatarUrl === url
+                            ? 'border-brand-500 shadow-md transform scale-105 z-10'
+                            : 'border-transparent hover:border-brand-300 dark:hover:border-brand-700 opacity-70 hover:opacity-100'
                         }`}
                       >
-                        {isSelected ? '✓ ' : '+ '} {tag}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt={`Avatar option ${i + 1}`} className="w-full h-full object-cover" />
+                        {avatarUrl === url && (
+                          <div className="absolute top-1 right-1 bg-brand-500 text-white rounded-full p-0.5 shadow-sm">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                          </div>
+                        )}
                       </button>
-                    )
-                  })}
+                      {/* Hover Preview Tooltip */}
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-32 h-32 rounded-xl overflow-hidden shadow-2xl border-2 border-brand-400 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-[100] bg-white hidden sm:block delay-100">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="Large preview" className="w-full h-full object-cover" />
+                        <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[10px] text-center font-bold py-1">Click to Select</div>
+                      </div>
+                      
+                      {/* Enlarge Modal Button */}
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setShowFullPreviewModal(url) }}
+                        className="absolute bottom-1 right-1 w-6 h-6 bg-slate-900/60 hover:bg-slate-900 backdrop-blur text-white rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                        title="View Full Size"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                      </button>
+                    </div>
+                  ))}
                 </div>
+                
+                {/* Mobile Generative Button */}
+                <button 
+                  onClick={async () => {
+                    if (!title || !description) return alert('Please enter a Title and Description first.')
+                    setIsGeneratingAvatar(true)
+                    try {
+                      const res = await generateAndUploadRoleImageAction({ title, category, description })
+                      if (res.url) setAvatarUrl(res.url)
+                    } catch (err) { console.error(err) }
+                    setIsGeneratingAvatar(false)
+                  }}
+                  disabled={isGeneratingAvatar || !title}
+                  className="sm:hidden w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 rounded-xl text-sm font-bold hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors border border-brand-200 dark:border-brand-800/50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {isGeneratingAvatar ? "Generating..." : "✨ Generate with AI"}
+                </button>
               </div>
 
               <div className="h-px bg-slate-200 dark:bg-slate-800 w-full"></div>
@@ -303,17 +596,17 @@ export default function CreateRolePage() {
                   </div>
                   <button 
                     onClick={handleAIGenerate}
-                    disabled={isGenerating}
-                    className="hidden sm:flex items-center gap-2 px-4 py-2 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 rounded-xl text-sm font-bold hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors border border-brand-200 dark:border-brand-800/50"
+                    disabled={isGenerating || !description.trim()}
+                    className="hidden sm:flex items-center gap-2 px-4 py-2 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 rounded-xl text-sm font-bold hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors border border-brand-200 dark:border-brand-800/50 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {isGenerating ? (
                       <span className="flex items-center gap-2">
                         <span className="w-4 h-4 rounded-full border-2 border-brand-500 border-t-transparent animate-spin"></span>
-                        Generating...
+                        Polishing...
                       </span>
                     ) : (
                       <>
-                        <span>✨</span> Generate with AI
+                        <span>✨</span> Polish with AI
                       </>
                     )}
                   </button>
@@ -330,11 +623,196 @@ export default function CreateRolePage() {
                 {/* Mobile only AI button */}
                 <button 
                   onClick={handleAIGenerate}
-                  disabled={isGenerating}
-                  className="sm:hidden w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 rounded-xl text-sm font-bold hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors border border-brand-200 dark:border-brand-800/50"
+                  disabled={isGenerating || !description.trim()}
+                  className="sm:hidden w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 rounded-xl text-sm font-bold hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors border border-brand-200 dark:border-brand-800/50 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {isGenerating ? "Generating..." : "✨ Generate Description with AI"}
+                  {isGenerating ? "Polishing..." : "✨ Polish with AI"}
                 </button>
+              </div>
+
+              <div className="h-px bg-slate-200 dark:bg-slate-800 w-full"></div>
+
+              {/* Perks to Intern */}
+              <div className="space-y-5">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Perks to Intern</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Search or browse to select what this internship offers.</p>
+                  </div>
+                  {selectedPerks.length > 0 && (
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-sm font-bold rounded-full">
+                        {selectedPerks.length} selected
+                      </span>
+                      <button
+                        onClick={() => setSelectedPerks([])}
+                        className="text-xs text-slate-400 hover:text-red-500 dark:hover:text-red-400 font-bold transition-colors"
+                      >
+                        Clear all
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Search Bar */}
+                <div className="relative">
+                  <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" strokeLinecap="round" />
+                  </svg>
+                  <input
+                    type="text"
+                    value={perksSearch}
+                    onChange={(e) => setPerksSearch(e.target.value)}
+                    placeholder="Search perks… e.g. mentorship, remote, resume"
+                    className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  />
+                  {perksSearch && (
+                    <button
+                      onClick={() => setPerksSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                    </button>
+                  )}
+                </div>
+
+                {/* Selected Perks Strip */}
+                {selectedPerks.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedPerks.map(perk => (
+                      <button
+                        key={perk}
+                        onClick={() => setSelectedPerks(prev => prev.filter(p => p !== perk))}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-green-50 border border-green-200 text-green-700 dark:bg-green-900/30 dark:border-green-700/50 dark:text-green-300 hover:bg-red-50 hover:border-red-200 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:border-red-700/50 dark:hover:text-red-400 transition-all group"
+                      >
+                        <span>{perk}</span>
+                        <svg className="w-3 h-3 opacity-50 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Accordion Categories */}
+                <div className="space-y-2">
+                  {PERKS_CATEGORIES.map((cat, catIndex) => {
+                    const searchLower = perksSearch.toLowerCase()
+                    const filteredItems = searchLower
+                      ? cat.items.filter(item => item.toLowerCase().includes(searchLower))
+                      : cat.items
+                    const selectedCount = cat.items.filter(item => selectedPerks.includes(item)).length
+                    const isExpanded = perksSearch ? filteredItems.length > 0 : expandedCategory === catIndex
+
+                    if (perksSearch && filteredItems.length === 0) return null
+
+                    return (
+                      <div key={catIndex} className="rounded-2xl border border-slate-200 dark:border-slate-700/60 overflow-hidden transition-all">
+                        {/* Category Header */}
+                        <button
+                          onClick={() => {
+                            if (!perksSearch) {
+                              setExpandedCategory(prev => prev === catIndex ? null : catIndex)
+                            }
+                          }}
+                          className="w-full flex items-center justify-between px-5 py-4 bg-slate-50/80 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{cat.name}</span>
+                            {selectedCount > 0 && (
+                              <span className="text-xs px-2 py-0.5 rounded-full font-black bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">
+                                {selectedCount}
+                              </span>
+                            )}
+                          </div>
+                          {!perksSearch && (
+                            <svg
+                              className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                          )}
+                        </button>
+
+                        {/* Category Items */}
+                        {isExpanded && (
+                          <div className="px-5 py-4 grid grid-cols-1 sm:grid-cols-2 gap-2 bg-white dark:bg-slate-900/50">
+                            {filteredItems.map(perk => {
+                              const isSelected = selectedPerks.includes(perk)
+                              return (
+                                <button
+                                  key={perk}
+                                  onClick={() => setSelectedPerks(prev => isSelected ? prev.filter(p => p !== perk) : [...prev, perk])}
+                                  className={`px-3.5 py-2.5 rounded-xl text-sm font-bold border transition-all text-left ${
+                                    isSelected
+                                      ? 'bg-green-50 border-green-300 text-green-700 dark:bg-green-900/30 dark:border-green-500/50 dark:text-green-300 shadow-sm'
+                                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 hover:border-slate-300'
+                                  }`}
+                                >
+                                  {isSelected ? '✓ ' : '+ '}{perk}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+
+                  {/* No results */}
+                  {perksSearch && PERKS_CATEGORIES.every(cat => !cat.items.some(item => item.toLowerCase().includes(perksSearch.toLowerCase()))) && (
+                    <div className="text-center py-8 text-slate-400 dark:text-slate-500">
+                      <p className="text-sm font-medium">No perks match &ldquo;{perksSearch}&rdquo;</p>
+                      <p className="text-xs mt-1">Try a different search term</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Custom Perks Input */}
+                <div className="space-y-2 pt-1">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Add Your Own</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={customPerkInput}
+                      onChange={(e) => setCustomPerkInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && customPerkInput.trim()) {
+                          e.preventDefault()
+                          const newPerks = customPerkInput
+                            .split(',')
+                            .map(p => p.trim())
+                            .filter(p => p.length > 0 && !selectedPerks.includes(p))
+                          if (newPerks.length > 0) {
+                            setSelectedPerks(prev => [...prev, ...newPerks])
+                          }
+                          setCustomPerkInput('')
+                        }
+                      }}
+                      placeholder="e.g. First Aid Training, Spanish Fluency"
+                      className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (customPerkInput.trim()) {
+                          const newPerks = customPerkInput
+                            .split(',')
+                            .map(p => p.trim())
+                            .filter(p => p.length > 0 && !selectedPerks.includes(p))
+                          if (newPerks.length > 0) {
+                            setSelectedPerks(prev => [...prev, ...newPerks])
+                          }
+                          setCustomPerkInput('')
+                        }
+                      }}
+                      disabled={!customPerkInput.trim()}
+                      className="px-5 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+                    >
+                      + Add
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">Separate multiple items with commas, then press Enter or click Add.</p>
+                </div>
               </div>
 
               <div className="h-px bg-slate-200 dark:bg-slate-800 w-full"></div>
@@ -343,7 +821,21 @@ export default function CreateRolePage() {
               <div className="space-y-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
                 <div>
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Application Requirements</h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Add short questions for applicants to answer, or request an introductory video.</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Set eligibility criteria, request a video, or add screening questions for applicants.</p>
+                </div>
+
+                {/* Eligibility Criteria */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Minimum Age <span className="text-slate-400 font-normal">(optional)</span></label>
+                  <input
+                    type="number"
+                    value={minAge}
+                    onChange={(e) => setMinAge(e.target.value)}
+                    placeholder="e.g. 16"
+                    min={14}
+                    max={21}
+                    className="w-full md:w-48 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-slate-900 dark:text-white"
+                  />
                 </div>
 
                 {/* Video Requirement Toggle */}
@@ -375,9 +867,35 @@ export default function CreateRolePage() {
                   </div>
                 </div>
 
+                {/* Ask for References Toggle */}
+                <div 
+                  className={`p-5 rounded-2xl border transition-all cursor-pointer flex items-start gap-4 ${
+                    requireTeacherRef 
+                      ? 'bg-brand-50/50 dark:bg-brand-900/20 border-brand-300 dark:border-brand-700/50 shadow-sm' 
+                      : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                  onClick={() => setRequireTeacherRef(!requireTeacherRef)}
+                >
+                  <div className="pt-1">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                      requireTeacherRef 
+                        ? 'bg-brand-600 dark:bg-brand-500 text-white' 
+                        : 'bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-transparent'
+                    }`}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </div>
+                  </div>
+                  <div className="flex-grow space-y-1">
+                    <h3 className="font-bold text-slate-900 dark:text-white">Ask for References</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Students will be asked to provide 1&ndash;3 personal or teacher references. You can reach out to these references to learn more about the student&apos;s character and work ethic.
+                    </p>
+                  </div>
+                </div>
                 <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
-                  <div className="mb-2 flex items-center justify-between">
+                  <div className="mb-2">
                      <h3 className="font-bold text-slate-900 dark:text-white">Written Questions</h3>
+                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Each applicant will be asked to answer these questions when applying for this role.</p>
                   </div>
 
                   {questions.map((question, index) => (
@@ -466,11 +984,16 @@ export default function CreateRolePage() {
                 <Button variant="outline" className="w-full rounded-xl bg-white dark:bg-slate-900 border-slate-200 hover:border-slate-300 dark:border-slate-700">Cancel</Button>
               </Link>
               <Button 
-                onClick={handlePublish}
-                disabled={isPublishing || !title}
+                onClick={handleReviewClick}
+                disabled={isChecking || isPublishing || !title}
                 className="w-full sm:w-auto rounded-xl shadow-brand-500/20 px-8 disabled:opacity-70 disabled:cursor-wait"
               >
-                {isPublishing ? 'Publishing...' : 'Publish Opportunity'}
+                {isChecking || isGeneratingAvatar ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></span>
+                    {isGeneratingAvatar ? '✨ Creating avatar…' : 'Checking…'}
+                  </span>
+                ) : 'Review & Publish'}
               </Button>
             </div>
             
@@ -478,6 +1001,247 @@ export default function CreateRolePage() {
 
         </div>
       </main>
+
+      {/* ======== Safety Flagged Modal ======== */}
+      {moderationError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md animate-fade-in-up">
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-600 dark:text-red-400">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Content Flagged</h3>
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                Our AI safety review found an issue with your listing:
+              </p>
+              <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30">
+                <p className="text-sm text-red-800 dark:text-red-300 font-medium">{moderationError}</p>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Please update your listing to comply with our community guidelines. InternPick is designed to keep high school students safe.
+              </p>
+            </div>
+            <div className="border-t border-slate-200 dark:border-slate-700 px-6 py-4 flex justify-end">
+              <button
+                onClick={() => setModerationError(null)}
+                className="px-6 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-bold rounded-xl hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors"
+              >
+                Go Back & Edit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======== Review Preview Overlay ======== */}
+      {showReview && (
+        <div className="fixed inset-0 z-50 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+          <div className="max-w-3xl mx-auto px-4 py-10">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">Review Your Listing</h1>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Everything look good? Confirm to publish.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-bold">✓ AI Approved</span>
+              </div>
+            </div>
+
+            {/* Preview Card */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+              
+              {/* Role Header */}
+              <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-800">
+                {/* Avatar */}
+                {avatarUrl && (
+                  <div className="flex flex-col items-center mb-6">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={avatarUrl}
+                      alt="Selected Avatar"
+                      className="w-40 h-40 rounded-2xl object-cover bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm"
+                    />
+                  </div>
+                )}
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{title || 'Untitled Role'}</h2>
+                <div className="flex flex-wrap gap-2 text-sm">
+                  {category && <span className="px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300 font-medium">{category}</span>}
+                  <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">
+                    {compensation === 'paid' ? '💰 Paid' : compensation === 'credit' ? '📚 School Credit' : '🎓 Experience'}
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">
+                    {workSetting === 'remote' ? '💻 Remote' : workSetting === 'hybrid' ? '🔄 Hybrid' : '🏢 On-site'}
+                  </span>
+                  {hoursPerWeek && <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">⏰ {hoursPerWeek} hrs/week</span>}
+                  {duration && <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">📅 {duration} {duration === 'ongoing' ? '' : 'months'}</span>}
+                </div>
+              </div>
+
+              {/* Description */}
+              {description && (
+                <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-800">
+                  <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Description</h3>
+                  <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">{description}</p>
+                </div>
+              )}
+
+              {/* Skills */}
+              {selectedTags.length > 0 && (
+                <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-800">
+                  <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Required Skills</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTags.map(tag => (
+                      <span key={tag} className="px-3 py-1.5 rounded-full bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300 text-sm font-medium">{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Perks */}
+              {selectedPerks.length > 0 && (
+                <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-800">
+                  <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Perks to Intern ({selectedPerks.length})</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedPerks.map(perk => (
+                      <span key={perk} className="px-3 py-1.5 rounded-full bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 text-sm font-medium border border-green-200 dark:border-green-800/30">✓ {perk}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+
+
+              {/* Application Requirements */}
+              <div className="p-6 md:p-8">
+                <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Application Requirements</h3>
+                <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                  {minAge && <li>• Minimum age: <span className="font-medium text-slate-800 dark:text-slate-200">{minAge}</span></li>}
+                  {requireTeacherRef && <li>• Teacher reference required</li>}
+                  {requireVideo && <li>• 60-second video introduction required</li>}
+                  {questions.length > 0 && <li>• {questions.length} screening question{questions.length > 1 ? 's' : ''}</li>}
+                  {!minAge && !requireTeacherRef && !requireVideo && questions.length === 0 && <li className="text-slate-400 dark:text-slate-500 italic">No special requirements</li>}
+                </ul>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row justify-end gap-4 mt-8">
+              <Button
+                variant="outline"
+                onClick={() => setShowReview(false)}
+                className="w-full sm:w-auto rounded-xl bg-white dark:bg-slate-900 border-slate-200 hover:border-slate-300 dark:border-slate-700"
+              >
+                ← Go Back & Edit
+              </Button>
+              <Button
+                onClick={handleConfirmPublish}
+                disabled={isPublishing}
+                className="w-full sm:w-auto rounded-xl shadow-brand-500/20 px-8 disabled:opacity-70 disabled:cursor-wait"
+              >
+                {isPublishing ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></span>
+                    Publishing…
+                  </span>
+                ) : '🚀 Confirm & Publish'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======== DOL Acknowledgment Modal ======== */}
+      {showDOLModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-lg animate-fade-in-up my-8">
+            <div className="p-6 space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+                  <span className="text-xl">⚖️</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">DOL Primary Beneficiary Test</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Required acknowledgment for unpaid internships</p>
+                </div>
+              </div>
+
+              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                Under the Department of Labor&apos;s guidelines, unpaid internships at for-profit businesses must pass the <strong className="text-slate-900 dark:text-white">7-factor Primary Beneficiary Test</strong>. Please confirm each factor applies to this role:
+              </p>
+
+              <div className="space-y-2">
+                {DOL_FACTORS.map((factor, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      const next = [...dolChecks]
+                      next[i] = !next[i]
+                      setDolChecks(next)
+                    }}
+                    className={`w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${
+                      dolChecks[i]
+                        ? 'bg-green-50 dark:bg-green-900/10 border-green-300 dark:border-green-700/50'
+                        : 'bg-white dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-700'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
+                      dolChecks[i]
+                        ? 'bg-green-600 dark:bg-green-500 text-white'
+                        : 'bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-600'
+                    }`}>
+                      {dolChecks[i] && (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      )}
+                    </div>
+                    <div>
+                      <p className={`text-sm font-bold ${dolChecks[i] ? 'text-green-800 dark:text-green-300' : 'text-slate-900 dark:text-white'}`}>
+                        {i + 1}. {factor.title}
+                      </p>
+                      <p className={`text-xs mt-0.5 ${dolChecks[i] ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                        {factor.desc}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                <span>{dolChecks.filter(Boolean).length}/7 acknowledged</span>
+                <div className="flex-grow h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-green-500 rounded-full transition-all duration-300"
+                    style={{ width: `${(dolChecks.filter(Boolean).length / 7) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-200 dark:border-slate-700 px-6 py-4 flex justify-between gap-3">
+              <button
+                onClick={() => setShowDOLModal(false)}
+                className="px-5 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+              >
+                ← Go Back
+              </button>
+              <button
+                onClick={async () => {
+                  setShowDOLModal(false)
+                  await proceedToReview()
+                }}
+                disabled={dolChecks.some(c => !c)}
+                className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+              >
+                {dolChecks.every(Boolean) ? '✓ Proceed to Review' : `Acknowledge All 7 Factors`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,12 +1,22 @@
 import React from 'react'
 import { Navbar } from '@/components/Navbar'
+import type { Metadata } from 'next'
 
+export const metadata: Metadata = {
+  title: "Privacy Policy | InternPick",
+  description: "Read the Privacy Policy for InternPick to understand how we collect, use, and protect your information.",
+  openGraph: {
+    title: "Privacy Policy | InternPick",
+    description: "Read the Privacy Policy for InternPick to understand how we collect, use, and protect your information.",
+    url: "https://www.internpick.com/privacy",
+  },
+}
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 flex flex-col">
       <Navbar />
       
-      <main className="flex-grow pt-32 pb-20 px-4 md:px-8">
+      <main className="flex-grow pt-4 pb-20 px-4 md:px-8">
         <div className="max-w-3xl mx-auto bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden p-8 md:p-12 animate-fade-in-up">
           <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-8">Privacy Policy</h1>
           

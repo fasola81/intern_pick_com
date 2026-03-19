@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { unstable_noStore as noStore } from 'next/cache'
-import { generateRolePrep, moderateMessage, polishAboutUs, lookupCompany } from '@/lib/gemini'
+import { generateRolePrep, moderateMessage, moderateOpportunityListing, polishAboutUs, lookupCompany, generateRoleAvatar, generateRoleImage } from '@/lib/gemini'
 
 // Helper: require authenticated user or throw
 async function requireAuth(supabase: any) {
@@ -10,6 +10,48 @@ async function requireAuth(supabase: any) {
   const userId = authData?.user?.id
   if (!userId) throw new Error('Not authenticated')
   return { userId, email: authData.user.email || '' }
+}
+
+// ============================================
+// AI Moderate Opportunity Content
+// ============================================
+export async function moderateOpportunityContent(data: {
+  title: string
+  description: string
+  category: string
+  compensation: string
+  perks: string[]
+  workSetting: string
+}) {
+  const supabase = await createClient()
+  let userId: string
+  try {
+    const auth = await requireAuth(supabase)
+    userId = auth.userId
+  } catch {
+    return { safe: true } // allow if not authenticated (will fail at publish anyway)
+  }
+
+  const result = await moderateOpportunityListing(data)
+
+  if (!result.safe) {
+    // Log the issue for platform owners
+    await supabase
+      .from('ai_moderation_logs')
+      .insert({
+        sender_id: userId,
+        sender_role: 'company',
+        message_text: `[LISTING] Title: ${data.title} | Description: ${data.description} | Perks: ${data.perks.join(', ')}`,
+        flagged_reason: result.reason || 'Content flagged by AI',
+        category: result.category || 'other',
+      })
+
+    console.log('[AI] 🚫 Listing blocked:', result.reason)
+  } else {
+    console.log('[AI] ✅ Listing approved')
+  }
+
+  return result
 }
 
 // ============================================
@@ -109,16 +151,41 @@ export async function checkCompanyAvailability(data: {
 }
 
 // ============================================
+// Validate URL (ping check)
+// ============================================
+export async function validateUrl(url: string): Promise<{ valid: boolean; url: string }> {
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 5000)
+    const res = await fetch(url, {
+      method: 'HEAD',
+      signal: controller.signal,
+      redirect: 'follow',
+    })
+    clearTimeout(timeout)
+    return { valid: res.status >= 200 && res.status < 400, url }
+  } catch {
+    return { valid: false, url }
+  }
+}
+
+// ============================================
 // Employer Onboarding
 // ============================================
 export async function createEmployerProfile(data: {
   companyName: string
   industry: string
   zipCode: string
+  addressLine?: string
+  city?: string
+  state?: string
   about?: string
   website?: string
   phone?: string
+  contactEmail?: string
   employeeCount?: string
+  logoUrl?: string
+  socialLinks?: Array<{ label: string; url: string }>
   status?: string
 }) {
   const supabase = await createClient()
@@ -143,16 +210,22 @@ export async function createEmployerProfile(data: {
     return { success: false, error: userError.message }
   }
 
-  const companyData: Record<string, string> = {
+  const companyData: Record<string, unknown> = {
     id: userId,
     company_name: data.companyName,
     industry: data.industry,
     zip_code: data.zipCode,
   }
+  if (data.addressLine) companyData.address_line = data.addressLine
+  if (data.city) companyData.city = data.city
+  if (data.state) companyData.state = data.state
   if (data.about) companyData.about = data.about
   if (data.website) companyData.website = data.website
   if (data.phone) companyData.phone = data.phone
+  if (data.contactEmail) companyData.contact_email = data.contactEmail
   if (data.employeeCount) companyData.employee_count = data.employeeCount
+  if (data.logoUrl) companyData.logo_url = data.logoUrl
+  if (data.socialLinks && data.socialLinks.length > 0) companyData.social_links = JSON.stringify(data.socialLinks)
   if (data.status) companyData.status = data.status
 
   const { error: companyError } = await supabase
@@ -169,6 +242,68 @@ export async function createEmployerProfile(data: {
 }
 
 // ============================================
+// Generate Role Avatar SVG (Server Action)
+// ============================================
+export async function generateRoleAvatarAction(data: {
+  title: string
+  category: string
+  description: string
+}): Promise<{ svg: string | null; error?: string }> {
+  const supabase = await createClient()
+  try {
+    await requireAuth(supabase)
+  } catch {
+    return { svg: null, error: 'Not authenticated' }
+  }
+
+  const result = await generateRoleAvatar(data)
+  return result
+}
+
+// ============================================
+// Generate and Upload Role Image (Server Action)
+// ============================================
+export async function generateAndUploadRoleImageAction(data: {
+  title: string
+  category: string
+  description: string
+}): Promise<{ url: string | null; error?: string }> {
+  const supabase = await createClient()
+  let userId: string
+  try {
+    const auth = await requireAuth(supabase)
+    userId = auth.userId
+  } catch {
+    return { url: null, error: 'Not authenticated' }
+  }
+
+  const { base64, error: genError } = await generateRoleImage(data)
+  if (genError || !base64) return { url: null, error: genError || 'Failed to generate image' }
+
+  const buffer = Buffer.from(base64, 'base64')
+  const fileName = `${userId}/${Date.now()}_role.jpg`
+
+  const { error: uploadError } = await supabase.storage
+    .from('role-avatars')
+    .upload(fileName, buffer, {
+      contentType: 'image/jpeg',
+      upsert: false,
+    })
+
+  if (uploadError) {
+    console.error('[DB] Storage upload error:', uploadError)
+    return { url: null, error: uploadError.message }
+  }
+
+  const { data: urlData } = supabase.storage
+    .from('role-avatars')
+    .getPublicUrl(fileName)
+
+  console.log('[DB] ✅ Role image uploaded:', urlData.publicUrl)
+  return { url: urlData.publicUrl }
+}
+
+// ============================================
 // Post a Role (Employer)
 // ============================================
 export async function createOpportunity(data: {
@@ -182,6 +317,8 @@ export async function createOpportunity(data: {
   workSetting: 'onsite' | 'hybrid' | 'remote'
   requiredSkills: string[]
   description: string
+  avatarSvg?: string | null
+  avatarUrl?: string | null
 }) {
   const supabase = await createClient()
   let companyId: string
@@ -207,6 +344,8 @@ export async function createOpportunity(data: {
       start_date: data.startDate || null,
       end_date: data.endDate || null,
       is_active: true,
+      avatar_svg: data.avatarSvg || null,
+      avatar_url: data.avatarUrl || null,
     })
     .select()
     .single()
@@ -591,10 +730,10 @@ export async function polishCompanyAbout(data: {
 // ============================================
 export async function lookupCompanyInfo(data: {
   companyName: string
-  industry: string
+  zipCode: string
   website: string
 }) {
-  const result = await lookupCompany(data.companyName, data.industry, data.website)
+  const result = await lookupCompany(data.companyName, data.zipCode, data.website)
   return { success: true, ...result }
 }
 
@@ -638,16 +777,460 @@ export async function uploadCompanyLogo(formData: FormData) {
 
   const logoUrl = urlData.publicUrl
 
-  // Save to companies table
+  // Save to companies table (only if row already exists — during onboarding it won't exist yet,
+  // and logo_url will be saved when createEmployerProfile is called)
   const { error: dbError } = await supabase
     .from('companies')
-    .upsert({ id: userId, logo_url: logoUrl }, { onConflict: 'id' })
+    .update({ logo_url: logoUrl })
+    .eq('id', userId)
 
   if (dbError) {
     console.error('[DB] logo_url update error:', dbError)
-    return { success: false, error: dbError.message }
+    // Don't fail — the logo was uploaded to storage successfully
+    // It will be linked when the profile is created/updated
   }
 
   console.log('[DB] ✅ Logo uploaded:', logoUrl)
   return { success: true, logoUrl }
+}
+
+// ============================================
+// Comments on Opportunities
+// ============================================
+export async function getComments(opportunityId: string) {
+  const supabase = await createClient()
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  const currentUserId = user?.id || null
+  
+  // Get the opportunity to know who the employer is
+  const { data: opp } = await supabase
+    .from('opportunities')
+    .select('company_id')
+    .eq('id', opportunityId)
+    .single()
+  
+  const employerId = opp?.company_id || null
+  const isEmployer = currentUserId === employerId
+  
+  // Get the company name for employer comments
+  let companyName = 'Business'
+  if (employerId) {
+    const { data: company } = await supabase
+      .from('companies')
+      .select('company_name')
+      .eq('id', employerId)
+      .single()
+    if (company) companyName = company.company_name
+  }
+
+  // Fetch comments
+  const { data: comments, error } = await supabase
+    .from('comments')
+    .select('id, opportunity_id, user_id, parent_id, content, created_at')
+    .eq('opportunity_id', opportunityId)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('[DB] fetch comments error:', error)
+    return { success: false, error: error.message, data: [] }
+  }
+
+  // Get user names for all comment authors
+  const userIds = [...new Set((comments || []).map(c => c.user_id))]
+  const { data: users } = await supabase
+    .from('users')
+    .select('id, full_name')
+    .in('id', userIds.length > 0 ? userIds : ['none'])
+
+  const userMap = new Map((users || []).map(u => [u.id, u.full_name]))
+
+  // Apply name masking
+  const masked = (comments || []).map(c => {
+    const isAuthor = currentUserId === c.user_id
+    const isEmployerComment = c.user_id === employerId
+    let displayName = 'Anonymous Student'
+    let isOwn = false
+
+    if (isEmployerComment) {
+      displayName = companyName
+    } else if (isAuthor) {
+      displayName = userMap.get(c.user_id) || 'You'
+      isOwn = true
+    } else if (isEmployer) {
+      // Employer sees all student names
+      displayName = userMap.get(c.user_id) || 'Student'
+    }
+
+    return {
+      id: c.id,
+      parentId: c.parent_id,
+      content: c.content,
+      createdAt: c.created_at,
+      displayName,
+      isOwn,
+      isEmployerComment,
+    }
+  })
+
+  return { success: true, data: masked }
+}
+
+export async function addComment(data: {
+  opportunityId: string
+  content: string
+  parentId?: string
+}) {
+  const supabase = await createClient()
+  let userId: string
+  try {
+    const auth = await requireAuth(supabase)
+    userId = auth.userId
+  } catch {
+    return { success: false, error: 'You must be logged in to comment' }
+  }
+
+  const { error } = await supabase
+    .from('comments')
+    .insert({
+      opportunity_id: data.opportunityId,
+      user_id: userId,
+      parent_id: data.parentId || null,
+      content: data.content,
+    })
+
+  if (error) {
+    console.error('[DB] insert comment error:', error)
+    return { success: false, error: error.message }
+  }
+
+  console.log('[DB] ✅ Comment added to opportunity:', data.opportunityId)
+  return { success: true }
+}
+
+// ============================================
+// Shared Benefit Tags (Site-Wide)
+// ============================================
+export async function getBenefitTags() {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('benefit_tags')
+    .select('name')
+    .order('name', { ascending: true })
+
+  if (error) {
+    console.error('[DB] fetch benefit_tags error:', error)
+    return { success: false, tags: [] }
+  }
+
+  const dbTags = (data || []).map(t => t.name)
+  return { success: true, tags: dbTags }
+}
+
+export async function addBenefitTag(name: string) {
+  const supabase = await createClient()
+  // Upsert so duplicates are ignored
+  const { error } = await supabase
+    .from('benefit_tags')
+    .upsert({ name: name.trim() }, { onConflict: 'name' })
+
+  if (error) {
+    console.error('[DB] insert benefit_tag error:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
+// ============================================
+// Candidate Search (for employers)
+// ============================================
+export async function searchCandidates(query?: string) {
+  noStore()
+  const supabase = await createClient()
+
+  const { data: students, error } = await supabase
+    .from('students')
+    .select('id, high_school_name, interests_array, skills_array, zip_code')
+
+  if (error) {
+    console.error('[DB] search candidates error:', error)
+    return { success: false, data: [] }
+  }
+
+  const ids = (students || []).map(s => s.id)
+  const { data: users } = ids.length > 0
+    ? await supabase.from('users').select('id, full_name').in('id', ids)
+    : { data: [] }
+
+  const nameMap = new Map((users || []).map(u => [u.id, u.full_name]))
+
+  let results = (students || []).map(s => ({
+    id: s.id,
+    name: nameMap.get(s.id) || 'Student',
+    highSchool: s.high_school_name || '',
+    interests: s.interests_array || [],
+    skills: s.skills_array || [],
+    zipCode: s.zip_code || '',
+  }))
+
+  if (query && query.trim()) {
+    const q = query.toLowerCase()
+    results = results.filter(s =>
+      s.name.toLowerCase().includes(q) ||
+      s.highSchool.toLowerCase().includes(q) ||
+      s.interests.some((i: string) => i.toLowerCase().includes(q)) ||
+      s.skills.some((sk: string) => sk.toLowerCase().includes(q))
+    )
+  }
+
+  console.log(`[DB] ✅ Found ${results.length} candidate(s)`)
+  return { success: true, data: results }
+}
+
+// ============================================
+// Get Employer's Roles (for invite dropdown)
+// ============================================
+export async function getEmployerRoles() {
+  noStore()
+  const supabase = await createClient()
+  let userId: string
+  try {
+    const auth = await requireAuth(supabase)
+    userId = auth.userId
+  } catch {
+    return { success: false, data: [] }
+  }
+
+  const { data, error } = await supabase
+    .from('opportunities')
+    .select('id, title, is_active')
+    .eq('company_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('[DB] fetch employer roles error:', error)
+    return { success: false, data: [] }
+  }
+
+  return { success: true, data: data || [] }
+}
+
+// ============================================
+// Invite Student to Role
+// ============================================
+export async function inviteStudentToRole(data: {
+  studentId: string
+  opportunityId: string
+  message?: string
+}) {
+  const supabase = await createClient()
+  let companyId: string
+  try {
+    const auth = await requireAuth(supabase)
+    companyId = auth.userId
+  } catch {
+    return { success: false, error: 'You must be logged in to invite candidates' }
+  }
+
+  const { error } = await supabase
+    .from('invitations')
+    .insert({
+      company_id: companyId,
+      student_id: data.studentId,
+      opportunity_id: data.opportunityId,
+      message: data.message || null,
+      status: 'pending',
+    })
+
+  if (error) {
+    if (error.code === '23505') {
+      return { success: false, error: 'This student has already been invited to this role.' }
+    }
+    console.error('[DB] invitation insert error:', error)
+    return { success: false, error: error.message }
+  }
+
+  console.log('[DB] ✅ Invitation sent:', data.studentId, '→', data.opportunityId)
+  return { success: true }
+}
+
+// ============================================
+// Candidates Pipeline (applicants per role)
+// ============================================
+export async function getCandidatesByRole() {
+  noStore()
+  const supabase = await createClient()
+  let userId: string
+  try {
+    const auth = await requireAuth(supabase)
+    userId = auth.userId
+  } catch {
+    return { success: false, data: [] }
+  }
+
+  // Get employer's roles
+  const { data: roles } = await supabase
+    .from('opportunities')
+    .select('id, title, category, is_active, required_skills')
+    .eq('company_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (!roles || roles.length === 0) return { success: true, data: [] }
+
+  // Get all interests (applications) for those roles
+  const roleIds = roles.map(r => r.id)
+  const { data: interests } = await supabase
+    .from('interests')
+    .select('id, student_id, opportunity_id, status, note, created_at')
+    .in('opportunity_id', roleIds)
+    .order('created_at', { ascending: false })
+
+  if (!interests || interests.length === 0) {
+    return { success: true, data: roles.map(r => ({ ...r, candidates: [] })) }
+  }
+
+  // Get student details
+  const studentIds = [...new Set(interests.map(i => i.student_id))]
+  const { data: students } = await supabase
+    .from('students')
+    .select('id, high_school_name, skills_array, interests_array')
+    .in('id', studentIds)
+
+  const { data: users } = await supabase
+    .from('users')
+    .select('id, full_name')
+    .in('id', studentIds)
+
+  const studentMap = new Map((students || []).map(s => [s.id, s]))
+  const nameMap = new Map((users || []).map(u => [u.id, u.full_name]))
+
+  // Group by role
+  const result = roles.map(role => ({
+    ...role,
+    candidates: interests
+      .filter(i => i.opportunity_id === role.id)
+      .map(i => {
+        const s = studentMap.get(i.student_id)
+        const candidateSkills = s?.skills_array || []
+        
+        let matchScore = 85
+        const roleSkills = role.required_skills || []
+        if (roleSkills.length > 0) {
+          const matchCount = candidateSkills.filter((cs: string) => 
+            roleSkills.some((rs: string) => rs.toLowerCase() === cs.toLowerCase())
+          ).length
+          matchScore = Math.min(100, Math.round((matchCount / roleSkills.length) * 100))
+        }
+
+        return {
+          interestId: i.id,
+          studentId: i.student_id,
+          name: nameMap.get(i.student_id) || 'Student',
+          highSchool: s?.high_school_name || '',
+          skills: candidateSkills,
+          interests: s?.interests_array || [],
+          status: i.status,
+          note: i.note,
+          appliedAt: i.created_at,
+          matchScore,
+        }
+      }),
+  }))
+
+  return { success: true, data: result }
+}
+
+// ============================================
+// Update Candidate Status (reject / propose / accept)
+// ============================================
+export async function updateCandidateStatus(interestId: string, newStatus: string) {
+  const supabase = await createClient()
+  try { await requireAuth(supabase) } catch {
+    return { success: false, error: 'Not authenticated' }
+  }
+
+  const { error } = await supabase
+    .from('interests')
+    .update({ status: newStatus })
+    .eq('id', interestId)
+
+  if (error) {
+    console.error('[DB] update candidate status error:', error)
+    return { success: false, error: error.message }
+  }
+
+  console.log('[DB] ✅ Candidate status updated:', interestId, '→', newStatus)
+  return { success: true }
+}
+
+// ============================================
+// Send Candidate Message (with AI moderation)
+// ============================================
+export async function sendCandidateMessage(data: {
+  interestId: string
+  senderRole: 'employer' | 'student'
+  text: string
+}) {
+  const supabase = await createClient()
+  let userId: string
+  try {
+    const auth = await requireAuth(supabase)
+    userId = auth.userId
+  } catch {
+    return { success: false, error: 'Not authenticated' }
+  }
+
+  // AI moderate the message
+  const modResult = await moderateMessage(data.text, data.senderRole === 'employer' ? 'company' : 'student')
+  if (!modResult.safe) {
+    // Log the moderation hit
+    await supabase.from('ai_moderation_logs').insert({
+      sender_id: userId,
+      sender_role: data.senderRole,
+      message_text: data.text,
+      flagged_reason: modResult.reason || 'Flagged',
+      flagged_category: modResult.category || 'content',
+    })
+    return { success: false, error: modResult.reason || 'Your message was flagged by our safety system.' }
+  }
+
+  // Insert into candidate_messages
+  const { error } = await supabase
+    .from('candidate_messages')
+    .insert({
+      interest_id: data.interestId,
+      sender_id: userId,
+      sender_role: data.senderRole,
+      text: data.text,
+    })
+
+  if (error) {
+    console.error('[DB] insert candidate message error:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
+// ============================================
+// Get Candidate Messages
+// ============================================
+export async function getCandidateMessages(interestId: string) {
+  noStore()
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('candidate_messages')
+    .select('id, sender_id, sender_role, text, created_at')
+    .eq('interest_id', interestId)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('[DB] fetch candidate messages error:', error)
+    return { success: false, data: [] }
+  }
+
+  return { success: true, data: data || [] }
 }

@@ -3,6 +3,25 @@ import { Button } from '@/components/ui/Button'
 import { FeatureCard } from '@/components/ui/FeatureCard'
 import Link from 'next/link'
 import Image from 'next/image'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: "InternPick - Local High School Internships & Mentorships",
+  description: "Join the premier marketplace for high school internships. Students can build AI resumes and apply with one click. Businesses can hire eager local talent completely free.",
+  openGraph: {
+    title: "InternPick - Local High School Internships & Mentorships",
+    description: "Join the premier marketplace for high school internships. Students can build AI resumes and apply with one click. Businesses can hire eager local talent completely free.",
+    url: "https://www.internpick.com/",
+    images: [
+      {
+        url: "/images/hero_background.png",
+        width: 1200,
+        height: 630,
+        alt: "InternPick Hero Banner",
+      },
+    ],
+  },
+}
 
 export default function Home() {
   return (
@@ -11,7 +30,7 @@ export default function Home() {
       
       <main className="flex flex-col items-center justify-center">
         {/* Responsive Hero Section */}
-        <section className="relative w-full overflow-hidden bg-white dark:bg-slate-950 pt-32 pb-24 md:pt-40 md:pb-32 px-4 border-b border-slate-200 dark:border-slate-800">
+        <section className="relative w-full min-h-[calc(100vh-3.5rem)] md:min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center overflow-hidden bg-white dark:bg-slate-950 py-12 md:py-20 px-4 border-b border-slate-200 dark:border-slate-800">
           <div className="absolute inset-0 z-0 opacity-[0.05] dark:opacity-[0.10]">
             <Image 
               src="/images/hero_background.png" 

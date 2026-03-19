@@ -18,9 +18,9 @@ export default function EmployerInterviewsPage() {
         </div>
         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">No interviews scheduled</h3>
         <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm">
-          Head over to the Short List to review matched candidates and invite them to chat or schedule an interview.
+          Head over to the Candidates board to review matched candidates and invite them to chat or schedule an interview.
         </p>
-        <Link href="/employer/shortlist"><Button variant="outline" className="mt-6 rounded-xl">Go to Short List</Button></Link>
+        <Link href="/employer/candidates"><Button variant="outline" className="mt-6 rounded-xl">Go to Candidates</Button></Link>
       </div>
     </div>
   )

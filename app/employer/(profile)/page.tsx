@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/Button'
 import { createBrowserClient } from '@supabase/ssr'
 
 export default function EmployerOverviewPage() {
-  const [companyName, setCompanyName] = useState('')
+  const [ownerFirstName, setOwnerFirstName] = useState('')
   const [roles, setRoles] = useState<any[]>([])
   const [applicationCount, setApplicationCount] = useState(0)
+  const [hiredCount, setHiredCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -20,13 +21,16 @@ export default function EmployerOverviewPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setIsLoading(false); return }
 
-      // Get company name
+      // Get owner name
       const { data: company } = await supabase
         .from('companies')
-        .select('company_name')
+        .select('owner_name')
         .eq('id', user.id)
         .single()
-      if (company) setCompanyName(company.company_name || '')
+      if (company?.owner_name) {
+        const firstName = company.owner_name.split(' ')[0]
+        setOwnerFirstName(firstName)
+      }
 
       // Get roles
       const { data: opps } = await supabase
@@ -45,6 +49,13 @@ export default function EmployerOverviewPage() {
           .select('*', { count: 'exact', head: true })
           .in('opportunity_id', oppIds)
         setApplicationCount(count || 0)
+
+        const { count: hCount } = await supabase
+          .from('interests')
+          .select('*', { count: 'exact', head: true })
+          .in('opportunity_id', oppIds)
+          .eq('status', 'accepted')
+        setHiredCount(hCount || 0)
       }
 
       setIsLoading(false)
@@ -68,39 +79,42 @@ export default function EmployerOverviewPage() {
       <section className="flex flex-col gap-6">
         <div>
           <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">
-            Welcome back{companyName ? `, ${companyName}` : ''}! 👋
+            Welcome back{ownerFirstName ? `, ${ownerFirstName}` : ''}! 👋
           </h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1">Here is what's happening with your recruitment pipeline.</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between group cursor-pointer hover:border-brand-300 transition-colors">
+          <Link href="/employer/roles" className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-[0_2px_12px_-3px_rgba(0,0,0,0.06)] flex items-center justify-between group cursor-pointer hover:border-brand-300 transition-colors relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-500 to-brand-400"></div>
             <div>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Active Roles</p>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1 leading-tight">Active Roles</p>
               <p className="text-3xl font-black text-slate-900 dark:text-white group-hover:text-brand-600 transition-colors">{roles.length}</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center text-xl">
+            <div className="w-12 h-12 rounded-xl bg-brand-50 dark:bg-blue-900/30 text-brand-600 flex items-center justify-center text-xl">
               💼
             </div>
-          </div>
+          </Link>
           
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between group cursor-pointer hover:border-brand-300 transition-colors">
+          <Link href="/employer/candidates" className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-[0_2px_12px_-3px_rgba(0,0,0,0.06)] flex items-center justify-between group cursor-pointer hover:border-brand-300 transition-colors relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-400"></div>
             <div>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total Applications</p>
-              <p className="text-3xl font-black text-slate-900 dark:text-white group-hover:text-brand-600 transition-colors">{applicationCount}</p>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1 leading-tight">Applicants</p>
+              <p className="text-3xl font-black text-slate-900 dark:text-white group-hover:text-amber-600 transition-colors">{applicationCount}</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-orange-50 dark:bg-orange-900/30 text-orange-600 flex items-center justify-center text-xl">
+            <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-orange-900/30 text-amber-600 flex items-center justify-center text-xl">
               ✨
             </div>
-          </div>
+          </Link>
 
-          <Link href="/employer/create" className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 shadow-sm flex items-center justify-between group cursor-pointer hover:border-brand-400 hover:bg-brand-50/50 dark:hover:bg-brand-900/10 transition-all">
+          <Link href="/employer/candidates" className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-[0_2px_12px_-3px_rgba(0,0,0,0.06)] flex items-center justify-between group cursor-pointer hover:border-brand-300 transition-colors relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 to-emerald-400"></div>
             <div>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Post New Role</p>
-              <p className="text-xl font-black text-brand-600 dark:text-brand-400 group-hover:text-brand-700 transition-colors">+ Create</p>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1 leading-tight">Hired</p>
+              <p className="text-3xl font-black text-slate-900 dark:text-white group-hover:text-green-600 transition-colors">{hiredCount}</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-brand-50 dark:bg-brand-900/30 text-brand-600 flex items-center justify-center text-xl">
-              ➕
+            <div className="w-12 h-12 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 flex items-center justify-center text-xl">
+              🎉
             </div>
           </Link>
         </div>
@@ -125,16 +139,34 @@ export default function EmployerOverviewPage() {
               </Link>
             </div>
           ) : (
-            <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200/80 dark:border-slate-800 shadow-[0_2px_12px_-3px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
               {roles.map((role) => (
-                <div key={role.id} className="p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                  <div>
-                    <h4 className="font-bold text-slate-900 dark:text-white">{role.title}</h4>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5 capitalize">{role.category || 'General'} • {role.work_setting || 'On-site'}</p>
+                <Link key={role.id} href={`/employer/role/${role.id}`} className="block">
+                <div className="p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
+                  <div className="flex items-center gap-4">
+                    {role.avatar_url ? (
+                      <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex-shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={role.avatar_url} alt={role.title} className="w-full h-full object-cover" />
+                      </div>
+                    ) : role.avatar_svg ? (
+                      <div
+                        className="w-12 h-12 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex-shrink-0"
+                        dangerouslySetInnerHTML={{ __html: role.avatar_svg }}
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-brand-100 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800/30 flex items-center justify-center flex-shrink-0">
+                        <span className="text-lg">💼</span>
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="font-bold text-slate-900 dark:text-white group-hover:text-brand-600 transition-colors">{role.title}</h4>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5 capitalize">{role.category || 'General'} • {role.work_setting || 'On-site'}</p>
+                    </div>
                   </div>
                   <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 gap-1 w-full sm:w-auto">
                     <div className="flex-1 sm:w-20 bg-white dark:bg-slate-900 rounded-lg p-2 flex flex-col items-center justify-center shadow-sm">
-                      <span className="text-lg font-black text-brand-600 dark:text-brand-400">{role.compensation === 'paid' ? `$${role.hourly_rate || '—'}` : role.compensation === 'credit' ? 'Credit' : 'Vol.'}</span>
+                      <span className="text-lg font-black text-brand-600 dark:text-brand-400">{role.compensation === 'paid' ? `$${role.hourly_rate || '—'}` : role.compensation === 'credit' ? 'Credit' : 'Unpaid'}</span>
                       <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Pay</span>
                     </div>
                     <div className="flex-1 sm:w-20 bg-white dark:bg-slate-900 rounded-lg p-2 flex flex-col items-center justify-center shadow-sm">
@@ -143,6 +175,7 @@ export default function EmployerOverviewPage() {
                     </div>
                   </div>
                 </div>
+                </Link>
               ))}
             </div>
           )}
@@ -151,7 +184,7 @@ export default function EmployerOverviewPage() {
         {/* 3. Quick Actions */}
         <section className="flex flex-col gap-4">
           <h3 className="font-bold text-slate-900 dark:text-white text-lg">Quick Actions</h3>
-          <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm p-4 flex flex-col gap-2">
+          <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200/80 dark:border-slate-800 shadow-[0_2px_12px_-3px_rgba(0,0,0,0.06)] p-4 flex flex-col gap-2">
             
             <Link href="/employer/create" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group">
               <div className="w-10 h-10 rounded-lg bg-brand-50 dark:bg-brand-900/30 text-brand-600 flex items-center justify-center text-lg group-hover:bg-brand-100 transition-colors">

@@ -2,23 +2,13 @@
 
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { formatPhone, formatEmail } from '@/lib/formatters'
 
 export default function EmployerSettingsPage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'team'>('profile')
-  const [businessUnits, setBusinessUnits] = useState<string[]>([])
   
   type HiringManager = { name: string; email: string; phone: string; }
   const [hiringManagers, setHiringManagers] = useState<HiringManager[]>([])
-
-  const predefinedBusinessUnits = [
-    "Software Engineering", "Product Management", "Design", "Marketing", "Sales", "Human Resources", "Operations", "Customer Support", "Finance", "Store Operations"
-  ]
-
-  const handleUpdateBusinessUnit = (index: number, value: string) => {
-    const newItems = [...businessUnits]
-    newItems[index] = value
-    setBusinessUnits(newItems)
-  }
 
   const handleUpdateManager = (index: number, field: keyof HiringManager, value: string) => {
     const newManagers = [...hiringManagers]
@@ -158,49 +148,6 @@ export default function EmployerSettingsPage() {
               {activeTab === 'team' && (
                 <div className="space-y-10 animate-fade-in-up">
                   
-                  {/* Business Units Section */}
-                  <section>
-                    <div className="mb-4">
-                      <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Business Units</h2>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Define the departments or teams within your company (e.g. Marketing, Store Operations).</p>
-                    </div>
-                    
-                    <datalist id="business-units-list">
-                      {predefinedBusinessUnits.map(unit => (
-                        <option key={unit} value={unit} />
-                      ))}
-                    </datalist>
-
-                    <div className="space-y-3">
-                      {businessUnits.map((unit, index) => (
-                        <div key={index} className="flex gap-3">
-                          <input 
-                            list="business-units-list"
-                            type="text" 
-                            value={unit}
-                            onChange={(e) => handleUpdateBusinessUnit(index, e.target.value)}
-                            placeholder="Select or type custom unit..."
-                            className="flex-grow px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
-                          />
-                          <button 
-                            onClick={() => setBusinessUnits(businessUnits.filter((_, i) => i !== index))}
-                            className="flex-shrink-0 px-4 flex items-center justify-center rounded-xl bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 transition-colors border border-red-100 dark:border-red-900/50"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                      <button 
-                        onClick={() => setBusinessUnits([...businessUnits, ""])}
-                        className="flex items-center gap-2 px-4 py-3 text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 font-bold text-sm transition-colors border border-dashed border-brand-300 dark:border-brand-800/50 rounded-xl hover:bg-brand-50 w-full sm:w-auto"
-                      >
-                        <span className="text-lg leading-none">+</span> Add Business Unit
-                      </button>
-                    </div>
-                  </section>
-
-                  <div className="h-px bg-slate-200 dark:bg-slate-800 w-full"></div>
-
                   {/* Hiring Managers Section */}
                   <section>
                     <div className="mb-4">
@@ -228,7 +175,7 @@ export default function EmployerSettingsPage() {
                                    type="email" 
                                    value={manager.email}
                                    placeholder="sarah@company.com"
-                                   onChange={(e) => handleUpdateManager(index, 'email', e.target.value)}
+                                   onChange={(e) => handleUpdateManager(index, 'email', formatEmail(e.target.value))}
                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
                                  />
                                </div>
@@ -238,7 +185,7 @@ export default function EmployerSettingsPage() {
                                    type="tel" 
                                    value={manager.phone}
                                    placeholder="(555) 000-0000"
-                                   onChange={(e) => handleUpdateManager(index, 'phone', e.target.value)}
+                                   onChange={(e) => handleUpdateManager(index, 'phone', formatPhone(e.target.value))}
                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
                                  />
                                </div>

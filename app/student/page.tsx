@@ -8,6 +8,7 @@ import { getActiveOpportunities, applyForOpportunity, uploadStudentVideo } from 
 import VideoRecorder from '@/components/VideoRecorder'
 import VideoLibrary from '@/components/VideoLibrary'
 import RolePrep from '@/components/RolePrep'
+import CommentThread from '@/components/CommentThread'
 import { createBrowserClient } from '@supabase/ssr'
 
 export default function StudentDashboard() {
@@ -263,7 +264,19 @@ export default function StudentDashboard() {
                   <div key={oppId} className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 p-6 sm:p-8 hover:shadow-lg transition-all duration-300 group" style={{ animationDelay: `${index * 50}ms` }}>
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center gap-4">
-                        <div className={`w-14 h-14 rounded-2xl ${iconBg} flex items-center justify-center text-2xl border`}>{emoji}</div>
+                        {opp.avatar_url ? (
+                          <div className="w-14 h-14 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 flex-shrink-0 bg-slate-100 dark:bg-slate-800">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={opp.avatar_url} alt={title} className="w-full h-full object-cover" />
+                          </div>
+                        ) : opp.avatar_svg ? (
+                          <div
+                            className="w-14 h-14 rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex-shrink-0"
+                            dangerouslySetInnerHTML={{ __html: opp.avatar_svg }}
+                          />
+                        ) : (
+                          <div className={`w-14 h-14 rounded-2xl ${iconBg} flex items-center justify-center text-2xl border flex-shrink-0`}>{emoji}</div>
+                        )}
                         <div>
                           <h3 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">{title}</h3>
                           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{companyName} • {settingLabel}</p>
@@ -347,6 +360,9 @@ export default function StudentDashboard() {
                             </div>
                           </div>
                         )}
+
+                        {/* Discussion / Comments */}
+                        <CommentThread opportunityId={oppId} />
                       </div>
                     )}
                   </div>

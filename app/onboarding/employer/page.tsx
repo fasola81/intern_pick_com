@@ -4,8 +4,9 @@ import React, { useState, useEffect, Suspense } from 'react'
 import { Button } from '@/components/ui/Button'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { createEmployerProfile, polishCompanyAbout, lookupCompanyInfo, uploadCompanyLogo, checkCompanyAvailability } from '@/app/actions'
+import { createEmployerProfile, polishCompanyAbout, lookupCompanyInfo, uploadCompanyLogo, checkCompanyAvailability, validateUrl } from '@/app/actions'
 import { createBrowserClient } from '@supabase/ssr'
+import { formatPhone, formatEmail } from '@/lib/formatters'
 
 function OnboardingWizard() {
   const logoInputRef = React.useRef<HTMLInputElement>(null)
@@ -23,15 +24,23 @@ function OnboardingWizard() {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false)
   const [duplicateError, setDuplicateError] = useState('')
   const [companyStatus, setCompanyStatus] = useState<'active' | 'pending_review'>('active')
+  const [aiDebug, setAiDebug] = useState<{ prompt: string; rawResponse: string } | null>(null)
+  const [socialLinks, setSocialLinks] = useState<Array<{ label: string; url: string; validated?: boolean; validating?: boolean }>>([])
   
   // Form State
   const [companyName, setCompanyName] = useState('')
   const [industry, setIndustry] = useState('')
   const [website, setWebsite] = useState('')
   const [zipCode, setZipCode] = useState('')
+  const [addressLine, setAddressLine] = useState('')
+  const [city, setCity] = useState('')
+  const [state, setState] = useState('')
   const [employeeCount, setEmployeeCount] = useState('')
   const [about, setAbout] = useState('')
   const [phone, setPhone] = useState('')
+  const [contactEmail, setContactEmail] = useState('')
+
+
 
   // Track which fields were AI-filled
   const [aiFields, setAiFields] = useState<Record<string, boolean>>({})
@@ -67,7 +76,7 @@ function OnboardingWizard() {
     loadProfile()
   }, [isEditMode])
 
-  const totalSteps = 4
+  const totalSteps = 5
 
   const handleNext = async () => {
     if (step === 1) {
@@ -98,15 +107,11 @@ function OnboardingWizard() {
         try {
           const result = await lookupCompanyInfo({
             companyName,
-            industry,
+            zipCode,
             website,
           })
           if (result.success) {
             const filled: Record<string, boolean> = {}
-            if (result.zipCode && !zipCode) {
-              setZipCode(result.zipCode)
-              filled.zipCode = true
-            }
             if (result.employeeCount && !employeeCount) {
               setEmployeeCount(result.employeeCount)
               filled.employeeCount = true
@@ -116,8 +121,12 @@ function OnboardingWizard() {
               filled.about = true
             }
             if (result.phone && !phone) {
-              setPhone(result.phone)
+              setPhone(formatPhone(result.phone))
               filled.phone = true
+            }
+            if (result.industry && !industry) {
+              setIndustry(result.industry)
+              filled.industry = true
             }
             if (Object.keys(filled).length > 0) {
               setAiFields(filled)
@@ -130,6 +139,37 @@ function OnboardingWizard() {
               setCompanyStatus('pending_review')
             } else {
               setCompanyStatus('active')
+            }
+
+            // 4. Show debug modal with prompt & response
+            setAiDebug({
+              prompt: result.prompt || 'N/A',
+              rawResponse: result.rawResponse || 'N/A',
+            })
+
+            if (result.email && !contactEmail) {
+              setContactEmail(result.email)
+              filled.email = true
+            }
+
+            // 5. Pre-fill social links from AI and validate them
+            const aiSocials: Array<{ label: string; url: string; validated?: boolean; validating?: boolean }> = []
+            if (result.linkedin) aiSocials.push({ label: 'LinkedIn', url: result.linkedin, validating: true })
+            if (result.instagram) aiSocials.push({ label: 'Instagram', url: result.instagram, validating: true })
+            if (result.facebook) aiSocials.push({ label: 'Facebook', url: result.facebook, validating: true })
+            if (result.twitter) aiSocials.push({ label: 'X / Twitter', url: result.twitter, validating: true })
+            if (aiSocials.length > 0) {
+              setSocialLinks(aiSocials)
+              // Validate URLs in background (skip mailto)
+              aiSocials.forEach(async (link, i) => {
+                if (link.url.startsWith('mailto:')) return
+                try {
+                  const check = await validateUrl(link.url)
+                  setSocialLinks(prev => prev.map((l, j) => j === i ? { ...l, validated: check.valid, validating: false } : l))
+                } catch {
+                  setSocialLinks(prev => prev.map((l, j) => j === i ? { ...l, validated: false, validating: false } : l))
+                }
+              })
             }
           } else {
             setCompanyStatus('pending_review')
@@ -152,19 +192,38 @@ function OnboardingWizard() {
   const handleFinish = async () => {
     setIsFinishing(true)
     
-    const result = await createEmployerProfile({
-      companyName,
-      industry,
-      zipCode,
-      about: about || undefined,
-      website: website || undefined,
-      phone: phone || undefined,
-      employeeCount: employeeCount || undefined,
-      status: isEditMode ? undefined : companyStatus,
-    })
-    
-    console.log('[Onboarding] Employer profile result:', result)
-    router.push('/employer')
+    try {
+      const result = await createEmployerProfile({
+        companyName,
+        industry,
+        zipCode,
+        addressLine: addressLine || undefined,
+        city: city || undefined,
+        state: state || undefined,
+        about: about || undefined,
+        website: website || undefined,
+        phone: phone || undefined,
+        contactEmail: contactEmail || undefined,
+        employeeCount: employeeCount || undefined,
+        logoUrl: logoUrl || undefined,
+        socialLinks: socialLinks.filter(l => l.url.trim()).map(l => ({ label: l.label, url: l.url })),
+        status: isEditMode ? undefined : companyStatus,
+      })
+      
+      console.log('[Onboarding] Employer profile result:', result)
+      
+      if (result.success) {
+        router.push('/employer')
+      } else {
+        console.error('[Onboarding] Profile save failed:', result.error)
+        alert('Failed to save profile: ' + (result.error || 'Unknown error'))
+        setIsFinishing(false)
+      }
+    } catch (err) {
+      console.error('[Onboarding] Unexpected error:', err)
+      alert('Something went wrong. Please try again.')
+      setIsFinishing(false)
+    }
   }
 
   const canProceed = () => {
@@ -173,6 +232,7 @@ function OnboardingWizard() {
       case 2: return !!industry
       case 3: return true
       case 4: return true
+      case 5: return true
       default: return false
     }
   }
@@ -192,17 +252,19 @@ function OnboardingWizard() {
     marketing: 'Marketing & Media', other: 'Other',
   }
 
-  const stepIcons = ['🏢', '🏷️', '📝', '🚀']
+  const stepIcons = ['🏢', '🏷️', '📝', '🌐', '🚀']
   const stepTitles = [
     'Set up your business',
     'What do you do?',
     'Tell students about you',
+    'Social & Contact Links',
     'Review & Launch',
   ]
   const stepSubtitles = [
     'Enter your company name and location so local students can find you.',
     'Help us match you with the right student talent.',
     'A great description helps attract the right candidates.',
+    'Let students connect with you across the web.',
     'Everything looks good? Let\'s get you started!',
   ]
 
@@ -269,8 +331,45 @@ function OnboardingWizard() {
             </div>
           )}
 
+          {/* AI Debug Modal */}
+          {aiDebug && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setAiDebug(null)}>
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden border border-slate-200 dark:border-slate-700" onClick={(e) => e.stopPropagation()}>
+                {/* Header */}
+                <div className="bg-purple-600 text-white px-6 py-4 flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🤖</span>
+                    <h3 className="font-bold text-lg">AI Company Lookup — Debug</h3>
+                  </div>
+                  <button onClick={() => setAiDebug(null)} className="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
+                </div>
+
+                <div className="overflow-y-auto max-h-[calc(80vh-7rem)] p-6 space-y-5">
+                  {/* Prompt Section */}
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">📤 Prompt Sent to Gemini</h4>
+                    <pre className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-mono overflow-x-auto">{aiDebug.prompt}</pre>
+                  </div>
+
+                  {/* Response Section */}
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">📥 Raw AI Response</h4>
+                    <pre className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-mono overflow-x-auto">{aiDebug.rawResponse}</pre>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="border-t border-slate-200 dark:border-slate-700 px-6 py-3 flex justify-end">
+                  <button onClick={() => setAiDebug(null)} className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-bold transition-colors">
+                    Got it
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* AI Prefilled Banner */}
-          {aiPrefilled && step >= 2 && step <= 3 && (
+          {aiPrefilled && step >= 2 && step <= 4 && (
             <div className="mb-6 p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/50 rounded-xl flex gap-3 items-start animate-fade-in">
               <span className="text-lg mt-0.5">🤖</span>
               <div>
@@ -305,15 +404,51 @@ function OnboardingWizard() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">HQ Zip Code *</label>
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">HQ Address *</label>
                 <input 
                   type="text" 
-                  value={zipCode}
-                  onChange={(e) => { setZipCode(e.target.value.replace(/\D/g, '').slice(0, 5)); setDuplicateError('') }}
-                  placeholder="e.g. 07081" 
-                  maxLength={5}
+                  value={addressLine}
+                  onChange={(e) => setAddressLine(e.target.value)}
+                  placeholder="Street address" 
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-slate-900 dark:text-white"
                 />
+                <div className="grid grid-cols-3 gap-2">
+                  <input 
+                    type="text" 
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="City" 
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-slate-900 dark:text-white"
+                  />
+                  <select
+                    value={state}
+                    onChange={(e) => setState(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all appearance-none text-slate-900 dark:text-white"
+                  >
+                    <option value="">State</option>
+                    <option value="AL">AL</option><option value="AK">AK</option><option value="AZ">AZ</option><option value="AR">AR</option>
+                    <option value="CA">CA</option><option value="CO">CO</option><option value="CT">CT</option><option value="DE">DE</option>
+                    <option value="FL">FL</option><option value="GA">GA</option><option value="HI">HI</option><option value="ID">ID</option>
+                    <option value="IL">IL</option><option value="IN">IN</option><option value="IA">IA</option><option value="KS">KS</option>
+                    <option value="KY">KY</option><option value="LA">LA</option><option value="ME">ME</option><option value="MD">MD</option>
+                    <option value="MA">MA</option><option value="MI">MI</option><option value="MN">MN</option><option value="MS">MS</option>
+                    <option value="MO">MO</option><option value="MT">MT</option><option value="NE">NE</option><option value="NV">NV</option>
+                    <option value="NH">NH</option><option value="NJ">NJ</option><option value="NM">NM</option><option value="NY">NY</option>
+                    <option value="NC">NC</option><option value="ND">ND</option><option value="OH">OH</option><option value="OK">OK</option>
+                    <option value="OR">OR</option><option value="PA">PA</option><option value="RI">RI</option><option value="SC">SC</option>
+                    <option value="SD">SD</option><option value="TN">TN</option><option value="TX">TX</option><option value="UT">UT</option>
+                    <option value="VT">VT</option><option value="VA">VA</option><option value="WA">WA</option><option value="WV">WV</option>
+                    <option value="WI">WI</option><option value="WY">WY</option><option value="DC">DC</option>
+                  </select>
+                  <input 
+                    type="text" 
+                    value={zipCode}
+                    onChange={(e) => { setZipCode(e.target.value.replace(/\D/g, '').slice(0, 5)); setDuplicateError('') }}
+                    placeholder="Zip Code" 
+                    maxLength={5}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-slate-900 dark:text-white"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -322,6 +457,7 @@ function OnboardingWizard() {
                   type="url" 
                   value={website}
                   onChange={(e) => setWebsite(e.target.value)}
+                  onBlur={() => { if (website && !website.match(/^https?:\/\//i)) setWebsite('https://' + website) }}
                   placeholder="https://yourcompany.com" 
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-slate-900 dark:text-white"
                 />
@@ -336,11 +472,14 @@ function OnboardingWizard() {
           {step === 2 && (
             <div className="animate-fade-in space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Industry *</label>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Industry *</label>
+                  {aiFields.industry && <AiBadge />}
+                </div>
                 <select
                   value={industry}
-                  onChange={(e) => setIndustry(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all appearance-none text-slate-900 dark:text-white"
+                  onChange={(e) => { setIndustry(e.target.value); if (aiFields.industry) setAiFields(f => ({...f, industry: false})) }}
+                  className={`w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all appearance-none text-slate-900 dark:text-white ${aiFields.industry ? 'border-purple-300 dark:border-purple-700' : 'border-slate-200 dark:border-slate-700'}`}
                 >
                   <option value="">Select Industry</option>
                   <option value="retail">Retail & E-commerce</option>
@@ -434,16 +573,92 @@ function OnboardingWizard() {
                 <input 
                   type="tel" 
                   value={phone}
-                  onChange={(e) => { setPhone(e.target.value); if (aiFields.phone) setAiFields(f => ({...f, phone: false})) }}
-                  placeholder="(555) 000-0000" 
+                  onChange={(e) => { setPhone(formatPhone(e.target.value)); if (aiFields.phone) setAiFields(f => ({...f, phone: false})) }}
+                  placeholder="(555) 000 0000" 
                   className={`w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-slate-900 dark:text-white ${aiFields.phone ? 'border-purple-300 dark:border-purple-700' : 'border-slate-200 dark:border-slate-700'}`}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Contact Email</label>
+                  {aiFields.email && <AiBadge />}
+                </div>
+                <input 
+                  type="email" 
+                  value={contactEmail}
+                  onChange={(e) => { setContactEmail(formatEmail(e.target.value)); if (aiFields.email) setAiFields(f => ({...f, email: false})) }}
+                  placeholder="contact@yourcompany.com" 
+                  className={`w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-slate-900 dark:text-white ${aiFields.email ? 'border-purple-300 dark:border-purple-700' : 'border-slate-200 dark:border-slate-700'}`}
                 />
               </div>
             </div>
           )}
 
-          {/* Step 4: Review & Launch */}
+          {/* Step 4: Social & Contact Links */}
           {step === 4 && (
+            <div className="animate-fade-in space-y-4">
+              {socialLinks.length > 0 && (
+                <div className="space-y-3">
+                  {socialLinks.map((link, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={link.label}
+                        onChange={(e) => setSocialLinks(prev => prev.map((l, j) => j === i ? { ...l, label: e.target.value } : l))}
+                        placeholder="Label (e.g. LinkedIn)"
+                        className="w-28 shrink-0 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-sm text-slate-900 dark:text-white"
+                      />
+                      <div className="flex-1 relative">
+                        <input
+                          type="url"
+                          value={link.url}
+                          onChange={(e) => setSocialLinks(prev => prev.map((l, j) => j === i ? { ...l, url: e.target.value, validated: undefined } : l))}
+                          placeholder="https://..."
+                          className={`w-full px-3 py-2.5 pr-8 rounded-xl border bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-sm text-slate-900 dark:text-white ${
+                            link.validated === true ? 'border-green-300 dark:border-green-700' :
+                            link.validated === false ? 'border-red-300 dark:border-red-700' :
+                            'border-slate-200 dark:border-slate-700'
+                          }`}
+                        />
+                        {link.validating && <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs animate-spin">⏳</span>}
+                        {link.validated === true && <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs">✅</span>}
+                        {link.validated === false && !link.validating && <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs" title="URL could not be verified">⚠️</span>}
+                      </div>
+                      <button
+                        onClick={() => setSocialLinks(prev => prev.filter((_, j) => j !== i))}
+                        className="text-red-400 hover:text-red-600 text-lg shrink-0 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        title="Remove"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {socialLinks.length === 0 && (
+                <div className="text-center py-6 text-slate-400 dark:text-slate-500">
+                  <p className="text-3xl mb-2">🌐</p>
+                  <p className="text-sm">No social links yet. Add your first one below!</p>
+                </div>
+              )}
+
+              <button
+                onClick={() => setSocialLinks(prev => [...prev, { label: '', url: '' }])}
+                className="w-full py-2.5 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-sm font-bold text-slate-500 dark:text-slate-400 hover:border-brand-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+              >
+                + Add Link
+              </button>
+
+              <p className="text-xs text-slate-400 text-center">
+                Add LinkedIn, Instagram, Facebook, X/Twitter, TikTok, or any other link where students can learn more about you.
+              </p>
+            </div>
+          )}
+
+          {/* Step 5: Review & Launch */}
+          {step === 5 && (
             <div className="animate-fade-in space-y-4">
               {/* Hidden file input */}
               <input
@@ -496,7 +711,7 @@ function OnboardingWizard() {
                   </button>
                   <div>
                     <h3 className="font-bold text-lg text-slate-900 dark:text-white">{companyName || 'Your Company'}</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 capitalize">{industryLabels[industry] || industry} • ZIP {zipCode}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 capitalize">{industryLabels[industry] || industry} • {[city, state, zipCode].filter(Boolean).join(', ') || `ZIP ${zipCode}`}</p>
                     <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Click logo to upload your company image</p>
                   </div>
                 </div>
@@ -527,7 +742,18 @@ function OnboardingWizard() {
                       <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{phone}</span>
                     </div>
                   )}
-                  {!employeeCount && !about && !website && !phone && (
+                  {socialLinks.filter(l => l.url.trim()).length > 0 && (
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700/50 space-y-2">
+                      <span className="text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-wider">Social Links</span>
+                      {socialLinks.filter(l => l.url.trim()).map((link, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <span className="text-slate-400 dark:text-slate-500 text-sm w-28 flex-shrink-0 font-medium">{link.label || 'Link'}</span>
+                          <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-brand-600 dark:text-brand-400 hover:underline truncate">{link.url}</a>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {!employeeCount && !about && !website && !phone && socialLinks.length === 0 && (
                     <p className="text-sm text-slate-400 italic">No additional details added — you can always edit later.</p>
                   )}
                 </div>
