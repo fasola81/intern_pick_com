@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Navbar } from '@/components/Navbar'
 import { Button } from '@/components/ui/Button'
 import { createBrowserClient } from '@supabase/ssr'
-import { createJournalEntry } from '@/app/actions'
+import { createJournalEntry, generateJournalQuestionAction, synthesizeJournalEntryAction } from '@/app/actions'
 import Link from 'next/link'
 
 export default function JournalPage() {
@@ -15,6 +15,43 @@ export default function JournalPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [chatMode, setChatMode] = useState(false)
+  const [chatHistory, setChatHistory] = useState<{role: 'user' | 'assistant', content: string}[]>([])
+  const [draftMsg, setDraftMsg] = useState('')
+  const [isChatting, setIsChatting] = useState(false)
+  const [synthesizing, setSynthesizing] = useState(false)
+
+  const startChatMode = () => {
+    setChatMode(true)
+    if (chatHistory.length === 0) {
+      setChatHistory([{ role: 'assistant', content: "Hi! I'm your Journal Copilot ✨ What was the most interesting task you worked on this week?" }])
+    }
+  }
+
+  const handleSendChat = async () => {
+    if (!draftMsg.trim()) return;
+    const newHistory = [...chatHistory, { role: 'user', content: draftMsg }]
+    setChatHistory(newHistory as any)
+    setDraftMsg('')
+    
+    const userCount = newHistory.filter(m => m.role === 'user').length
+    if (userCount >= 3) {
+      setSynthesizing(true)
+      const res = await synthesizeJournalEntryAction(newHistory as any)
+      if (res.success && res.data) {
+        setReflection(res.data)
+        setChatMode(false)
+      }
+      setSynthesizing(false)
+    } else {
+      setIsChatting(true)
+      const res = await generateJournalQuestionAction(newHistory as any)
+      if (res.success && res.data) {
+        setChatHistory([...newHistory, { role: 'assistant', content: res.data }] as any)
+      }
+      setIsChatting(false)
+    }
+  }
 
   useEffect(() => {
     async function load() {
@@ -98,18 +135,54 @@ export default function JournalPage() {
                 <h3 className="font-bold text-slate-900 dark:text-white">New Reflection</h3>
                 {success && <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 rounded-xl p-3 text-sm text-emerald-700 dark:text-emerald-300">✅ Journal entry saved!</div>}
 
-                <div>
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-1 block">What did you learn or experience? *</label>
-                  <textarea
-                    value={reflection}
-                    onChange={(e) => setReflection(e.target.value)}
-                    placeholder="Describe what you worked on, what you learned, challenges you faced, and how you grew..."
-                    rows={5}
-                    maxLength={1000}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white resize-none"
-                  />
-                  <p className="text-xs text-slate-400 mt-1 text-right">{reflection.length}/1000</p>
-                </div>
+                {chatMode ? (
+                  <div className="flex flex-col gap-3 rounded-[1.5rem] border border-brand-200 dark:border-brand-800/50 bg-brand-50/50 dark:bg-brand-900/10 p-5 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xl">✨</span>
+                      <div>
+                        <h4 className="font-bold text-brand-900 dark:text-brand-100 text-sm">Journal Copilot</h4>
+                        <p className="text-xs text-brand-700/70 dark:text-brand-300/70">Reflect on your week in a chat. I'll write the formal entry when we're done!</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col gap-3 max-h-64 overflow-y-auto mb-2 hide-scrollbar">
+                      {chatHistory.map((msg, idx) => (
+                        <div key={idx} className={`p-3 rounded-2xl text-sm leading-relaxed ${
+                          msg.role === 'assistant' 
+                            ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 mr-8 border border-slate-200 dark:border-slate-700 shadow-sm rounded-tl-sm' 
+                            : 'bg-brand-600 text-white ml-8 shadow-sm rounded-tr-sm'
+                        }`}>
+                          {msg.content}
+                        </div>
+                      ))}
+                      {isChatting && <div className="text-xs text-slate-500 animate-pulse py-2 px-1">✨ Copilot is typing...</div>}
+                      {synthesizing && <div className="text-xs text-emerald-600 animate-pulse font-bold py-2 px-1">✨ Synthesizing your formal journal entry...</div>}
+                    </div>
+                    
+                    <div className="flex gap-2 mt-auto">
+                       <input value={draftMsg} onChange={e => setDraftMsg(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendChat()} placeholder="Type your answer..." className="flex-grow px-4 py-3 rounded-xl border border-brand-200 dark:border-brand-800/50 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50" disabled={isChatting || synthesizing} />
+                       <Button onClick={handleSendChat} disabled={!draftMsg.trim() || isChatting || synthesizing} className="bg-brand-600 hover:bg-brand-700 text-white text-sm px-5 py-3 h-auto rounded-xl shadow-sm">Send</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                      <span>What did you learn or experience? *</span>
+                      <button onClick={startChatMode} className="text-xs font-bold text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 dark:bg-brand-900/30 dark:hover:bg-brand-900/50 px-3 py-1.5 rounded-lg transition-colors border border-brand-200 dark:border-brand-800/50 shadow-sm">
+                        ✨ Start AI Copilot
+                      </button>
+                    </label>
+                    <textarea
+                      value={reflection}
+                      onChange={(e) => setReflection(e.target.value)}
+                      placeholder="Describe what you worked on, what you learned, challenges you faced, and how you grew..."
+                      rows={5}
+                      maxLength={1000}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white resize-none"
+                    />
+                    <p className="text-xs text-slate-400 mt-1 text-right">{reflection.length}/1000</p>
+                  </div>
+                )}
 
                 <div>
                   <label className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-1 block">Skills Practiced <span className="text-slate-400 font-normal">(optional)</span></label>

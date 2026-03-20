@@ -1,11 +1,11 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { getCandidatesByRole, updateCandidateStatus, sendCandidateMessage, getCandidateMessages } from '@/app/actions'
+import { getCandidatesByRole, updateCandidateStatus, sendCandidateMessage, getCandidateMessages, draftEmployerMessageAction } from '@/app/actions'
 
 type CandidateMsg = { id: string; sender_id: string; sender_role: string; text: string; created_at: string }
 type Candidate = {
-  interestId: string; studentId: string; name: string; highSchool: string
+  interestId: string; studentId: string; name: string; highSchool: string; roleTitle?: string;
   skills: string[]; interests: string[]; status: string; note: string | null; appliedAt: string
 }
 type RoleGroup = { id: string; title: string; category: string; is_active: boolean; candidates: Candidate[] }
@@ -83,6 +83,23 @@ export default function CandidatesPage() {
   const [dmError, setDmError] = useState('')
   const [isSendingDm, setIsSendingDm] = useState(false)
   const [isLoadingDm, setIsLoadingDm] = useState(false)
+  const [isDrafting, setIsDrafting] = useState(false)
+
+  const draftMessage = async (intent: string) => {
+    if (!dmCandidate || !dmCandidate.roleTitle) {
+      setDmError('Cannot draft without role context.')
+      return
+    }
+    setIsDrafting(true)
+    setDmError('')
+    const res = await draftEmployerMessageAction(dmCandidate.name, dmCandidate.roleTitle, intent)
+    if (res.success && res.data) {
+      setDmText(res.data)
+    } else {
+      setDmError(res.error || 'Failed to draft AI message.')
+    }
+    setIsDrafting(false)
+  }
 
   // Propose modal
   const [proposeCandidate, setProposeCandidate] = useState<Candidate | null>(null)
@@ -194,13 +211,14 @@ export default function CandidatesPage() {
       ) : (
         <div className="flex flex-col gap-10">
           {roleGroups.map((role) => {
-            const appliedCandidates = role.candidates.filter(c => c.status === 'pending');
-            const shortListedCandidates = role.candidates.filter(c => c.status === 'short_listed');
-            const offeredCandidates = role.candidates.filter(c => c.status === 'offered');
-            const acceptedCandidates = role.candidates.filter(c => c.status === 'accepted');
-            const onboardingCandidates = role.candidates.filter(c => c.status === 'onboarding');
-            const readyCandidates = role.candidates.filter(c => c.status === 'ready_to_start');
-            const declinedCandidates = role.candidates.filter(c => c.status === 'declined');
+            const enrichedCandidates = role.candidates.map(c => ({ ...c, roleTitle: role.title }))
+            const appliedCandidates = enrichedCandidates.filter(c => c.status === 'pending');
+            const shortListedCandidates = enrichedCandidates.filter(c => c.status === 'short_listed');
+            const offeredCandidates = enrichedCandidates.filter(c => c.status === 'offered');
+            const acceptedCandidates = enrichedCandidates.filter(c => c.status === 'accepted');
+            const onboardingCandidates = enrichedCandidates.filter(c => c.status === 'onboarding');
+            const readyCandidates = enrichedCandidates.filter(c => c.status === 'ready_to_start');
+            const declinedCandidates = enrichedCandidates.filter(c => c.status === 'declined');
 
             return (
               <div key={role.id} className="flex flex-col">
@@ -331,6 +349,17 @@ export default function CandidatesPage() {
 
               {/* Input */}
               <div className="border-t border-slate-100 dark:border-slate-800 px-4 py-3">
+                <div className="flex gap-2 mb-3 overflow-x-auto hide-scrollbar">
+                  <button onClick={() => draftMessage('interview')} disabled={isDrafting} className="whitespace-nowrap px-3 py-1.5 bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:hover:bg-brand-900/50 dark:text-brand-400 text-xs font-bold rounded-lg transition-colors border border-brand-200 dark:border-brand-800/50 disabled:opacity-50">
+                    {isDrafting ? '✨ drafting...' : '✨ Interview Invite'}
+                  </button>
+                  <button onClick={() => draftMessage('offer')} disabled={isDrafting} className="whitespace-nowrap px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 dark:bg-green-900/30 dark:hover:bg-green-900/50 dark:text-green-400 text-xs font-bold rounded-lg transition-colors border border-green-200 dark:border-green-800/50 disabled:opacity-50">
+                    {isDrafting ? '✨ drafting...' : '✨ Offer'}
+                  </button>
+                  <button onClick={() => draftMessage('rejection')} disabled={isDrafting} className="whitespace-nowrap px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 text-xs font-bold rounded-lg transition-colors border border-slate-200 dark:border-slate-700 disabled:opacity-50">
+                    {isDrafting ? '✨ drafting...' : '✨ Gentle Decline'}
+                  </button>
+                </div>
                 {dmError && (
                   <div className="mb-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 text-xs font-medium text-red-700 dark:text-red-300">
                     ⚠️ {dmError}

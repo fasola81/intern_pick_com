@@ -35,7 +35,7 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // Protected routes — redirect to login if not authenticated
-  const protectedRoutes = ['/student', '/employer', '/account']
+  const protectedRoutes = ['/student', '/employer', '/educator', '/account']
   const isProtected = protectedRoutes.some(route => pathname.startsWith(route))
   
   if (isProtected && !user) {
@@ -52,7 +52,13 @@ export async function updateSession(request: NextRequest) {
   if (isAuthRoute && user) {
     const url = request.nextUrl.clone()
     const role = user.user_metadata?.role || 'student'
-    url.pathname = role === 'employer' ? '/employer' : '/student'
+    if (role === 'educator') {
+      url.pathname = '/educator'
+    } else if (role === 'employer') {
+      url.pathname = '/employer'
+    } else {
+      url.pathname = '/student'
+    }
     return NextResponse.redirect(url)
   }
 

@@ -58,25 +58,30 @@ export default function LogHoursPage() {
     setError('')
     setSuccess(false)
 
-    const result = await createTimeLog({
-      placementId: placement.id,
-      logDate,
-      hours,
-      notes,
-    })
+    try {
+      const result = await createTimeLog({
+        placementId: placement.id,
+        logDate,
+        hours,
+        notes,
+      })
 
-    if (result.success) {
-      setSuccess(true)
-      setNotes('')
-      setHours(1)
-      // Refresh logs
-      const supabase = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
-      const { data } = await supabase.from('time_logs').select('*').eq('placement_id', placement.id).order('log_date', { ascending: false }).limit(20)
-      setLogs(data || [])
-    } else {
-      setError(result.error || 'Failed to log hours')
+      if (result.success) {
+        setSuccess(true)
+        setNotes('')
+        setHours(1)
+        // Refresh logs
+        const supabase = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+        const { data } = await supabase.from('time_logs').select('*').eq('placement_id', placement.id).order('log_date', { ascending: false }).limit(20)
+        setLogs(data || [])
+      } else {
+        setError(result.error || 'Failed to log hours')
+      }
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred.')
+    } finally {
+      setIsSubmitting(false)
     }
-    setIsSubmitting(false)
   }
 
   return (

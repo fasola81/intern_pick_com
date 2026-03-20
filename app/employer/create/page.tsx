@@ -21,6 +21,7 @@ export default function CreateRolePage() {
   const router = useRouter()
   const [isGenerating, setIsGenerating] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
+  const [publishError, setPublishError] = useState<string | null>(null)
   const [isChecking, setIsChecking] = useState(false)
   const [showReview, setShowReview] = useState(false)
   const [moderationError, setModerationError] = useState<string | null>(null)
@@ -260,21 +261,32 @@ export default function CreateRolePage() {
 
   const handleConfirmPublish = async () => {
     setIsPublishing(true)
-    const result = await createOpportunity({
-      title,
-      category,
-      compensation,
-      hourlyRate: compensation === 'paid' ? parseFloat(hourlyRate) || undefined : undefined,
-      hoursPerWeek: parseInt(hoursPerWeek) || undefined,
-      startDate: undefined,
-      endDate: undefined,
-      workSetting,
-      requiredSkills: selectedTags,
-      description,
-      avatarUrl,
-    })
-    console.log('[Create Role] Result:', result)
-    router.push('/employer')
+    setPublishError(null)
+    try {
+      const result = await createOpportunity({
+        title,
+        category,
+        compensation,
+        hourlyRate: compensation === 'paid' ? parseFloat(hourlyRate) || undefined : undefined,
+        hoursPerWeek: parseInt(hoursPerWeek) || undefined,
+        startDate: undefined,
+        endDate: undefined,
+        workSetting,
+        requiredSkills: selectedTags,
+        description,
+        avatarUrl,
+      })
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create opportunity. Please try again.')
+      }
+      console.log('[Create Role] Result:', result)
+      router.push('/employer')
+    } catch (err: any) {
+      console.error('[Create Role] Error:', err)
+      setPublishError(err.message || 'An unexpected error occurred while publishing.')
+    } finally {
+      setIsPublishing(false)
+    }
   }
 
   const stateMinWage = selectedState ? getMinimumWageByAbbr(selectedState) : null
@@ -1510,6 +1522,11 @@ export default function CreateRolePage() {
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row justify-end gap-4 mt-8">
+              {publishError && (
+                <div className="flex-1 px-4 py-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-400 text-sm font-medium rounded-xl flex items-center justify-start gap-2">
+                  <span>⚠️</span> {publishError}
+                </div>
+              )}
               <Button
                 variant="outline"
                 onClick={() => setShowReview(false)}

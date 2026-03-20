@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { unstable_noStore as noStore } from 'next/cache'
-import { generateRolePrep, moderateMessage, moderateOpportunityListing, polishAboutUs, lookupCompany, generateRoleAvatar, generateRoleImage, suggestSkillTags as aiSuggestSkillTags, reviewDOLCompliance as aiReviewDOLCompliance, moderatePracticumProgram as aiModeratePracticum, isEducatorEmailDomain } from '@/lib/gemini'
+import { generateRolePrep, moderateMessage, moderateOpportunityListing, polishAboutUs, lookupCompany, generateRoleAvatar, generateRoleImage, suggestSkillTags as aiSuggestSkillTags, reviewDOLCompliance as aiReviewDOLCompliance, moderatePracticumProgram as aiModeratePracticum, isEducatorEmailDomain, generatePracticumDraft as aiGeneratePracticumDraft, generateStudentResume as aiGenerateStudentResume, generateEmployerMessageDraft as aiGenerateEmployerMessageDraft, generateJournalQuestion as aiGenerateJournalQuestion, synthesizeJournalEntry as aiSynthesizeJournalEntry, suggestPlacements as aiSuggestPlacements, polishStudentMessage as aiPolishStudentMessage } from '@/lib/gemini'
 
 // Helper: require authenticated user or throw
 async function requireAuth(supabase: any) {
@@ -2091,3 +2091,189 @@ export async function createJournalEntry(data: {
   }
   return { success: true, entry }
 }
+
+// ============================================
+// Educator: Generate Practicum Draft
+// ============================================
+export async function draftPracticumProgramAction(data: {
+  title: string
+  category: string
+  schoolName: string
+}) {
+  const supabase = await createClient()
+  try {
+    await requireAuth(supabase)
+  } catch {
+    return { success: false, error: 'You must be logged in to use this feature' }
+  }
+
+  const result = await aiGeneratePracticumDraft(data)
+  return { success: true, ...result }
+}
+
+// ============================================
+// Student: Generate Resume via AI
+// ============================================
+export async function generateStudentResumeAction(inputText: string) {
+  const supabase = await createClient()
+  try {
+    await requireAuth(supabase)
+  } catch {
+    return { success: false, error: 'You must be logged in to use this feature' }
+  }
+
+  try {
+    const result = await aiGenerateStudentResume(inputText)
+    return { success: true, data: result }
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to generate resume' }
+  }
+}
+
+// ============================================
+// Employer: AI Message Drafter
+// ============================================
+export async function draftEmployerMessageAction(studentName: string, roleTitle: string, intent: string) {
+  const supabase = await createClient()
+  try {
+    await requireAuth(supabase)
+  } catch {
+    return { success: false, error: 'You must be logged in to use this feature' }
+  }
+
+  if (!studentName || !roleTitle || !intent) {
+    return { success: false, error: 'Missing required parameters' }
+  }
+
+  if (!['interview', 'rejection', 'offer'].includes(intent)) {
+    return { success: false, error: 'Invalid message intent' }
+  }
+
+  try {
+    const draft = await aiGenerateEmployerMessageDraft(studentName, roleTitle, intent as any)
+    return { success: true, data: draft }
+  } catch (error: any) {
+    console.error('[DraftMessage] Error:', error)
+    return { success: false, error: 'Failed to draft message.' }
+  }
+}
+
+// ============================================
+// Student: Guided Conversational Journaling
+// ============================================
+export async function generateJournalQuestionAction(chatHistory: Array<{role: 'user' | 'assistant', content: string}>) {
+  const supabase = await createClient()
+  try {
+    await requireAuth(supabase)
+  } catch {
+    return { success: false, error: 'You must be logged in' }
+  }
+
+  try {
+    const question = await aiGenerateJournalQuestion(chatHistory)
+    return { success: true, data: question }
+  } catch (error: any) {
+    console.error('[JournalQuestion] Error:', error)
+    return { success: false, error: 'Failed to generate question.' }
+  }
+}
+
+export async function synthesizeJournalEntryAction(chatHistory: Array<{role: 'user' | 'assistant', content: string}>) {
+  const supabase = await createClient()
+  try {
+    await requireAuth(supabase)
+  } catch {
+    return { success: false, error: 'You must be logged in' }
+  }
+
+  try {
+    const synthesized = await aiSynthesizeJournalEntry(chatHistory)
+    return { success: true, data: synthesized }
+  } catch (error: any) {
+    console.error('[JournalSynthesize] Error:', error)
+    return { success: false, error: 'Failed to synthesize journal entry.' }
+  }
+}
+
+// ============================================
+// Educator: Smart Matching Copilot
+// ============================================
+export async function generateMatchesAction(studentId: string) {
+  const supabase = await createClient()
+  try {
+    await requireAuth(supabase)
+  } catch {
+    return { success: false, error: 'You must be logged in' }
+  }
+
+  const { data: student } = await supabase.from('students').select('*').eq('id', studentId).single()
+  if (!student) return { success: false, error: 'Student not found' }
+
+  const { data: resume } = await supabase.from('resumes').select('*').eq('student_id', studentId).single()
+
+  const studentProfile = {
+    firstName: student.first_name,
+    lastName: student.last_name,
+    gradeLevel: student.grade_level,
+    careerInterests: student.career_interests,
+    bio: student.bio,
+    resume: resume ? JSON.stringify(resume) : 'No resume data'
+  }
+
+  const { data: opportunities } = await supabase.from('opportunities').select('id, title, description, benefits, companies(company_name)').eq('status', 'active')
+  if (!opportunities || opportunities.length === 0) return { success: false, error: 'No active opportunities available' }
+
+  const formattedOpps = opportunities.map((o: any) => ({
+    id: o.id,
+    title: o.title,
+    company: o.companies?.company_name || 'Unknown',
+    description: o.description
+  }))
+
+  try {
+    const matches = await aiSuggestPlacements(studentProfile, formattedOpps)
+    const detailedMatches = matches.map((m: any) => {
+      const opp = formattedOpps.find((o: any) => o.id === m.opportunityId)
+      return {
+        ...m,
+        title: opp?.title,
+        company: opp?.company,
+      }
+    })
+    return { success: true, data: detailedMatches, studentName: student.first_name }
+  } catch (error: any) {
+    console.error('[Matches] Error:', error)
+    return { success: false, error: 'Failed to generate matches' }
+  }
+}
+
+// ============================================
+// Student: Professional Communication Coach
+// ============================================
+export async function polishStudentMessageAction(rawText: string) {
+  const supabase = await createClient()
+  try {
+    await requireAuth(supabase)
+  } catch {
+    return { success: false, error: 'You must be logged in' }
+  }
+
+  try {
+    const polished = await aiPolishStudentMessage(rawText)
+    return { success: true, data: polished }
+  } catch (error: any) {
+    console.error('[Coach] Error:', error)
+    return { success: false, error: 'Failed to polish message' }
+  }
+}
+
+export async function demoModerateMessageAction(text: string) {
+  // Exposes moderateMessage specifically for the Student UI Demo to trigger the PII Shield
+  try {
+    const res = await moderateMessage(text, 'student')
+    return { success: true, isSafe: res.isSafe, reason: res.reason, category: res.category }
+  } catch (err: any) {
+    return { success: false, error: 'Moderation failed' }
+  }
+}
+

@@ -4,13 +4,14 @@ import React, { useState } from 'react'
 import { Navbar } from '@/components/Navbar'
 import { Button } from '@/components/ui/Button'
 import { useRouter } from 'next/navigation'
-import { createPracticumProgram, moderateAndPublishPracticumAction } from '@/app/actions'
+import { createPracticumProgram, moderateAndPublishPracticumAction, draftPracticumProgramAction } from '@/app/actions'
 
 export default function CreateProgramPage() {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [isSaving, setIsSaving] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
+  const [isDrafting, setIsDrafting] = useState(false)
   const [savedProgramId, setSavedProgramId] = useState<string | null>(null)
   const [publishResult, setPublishResult] = useState<{ success: boolean; issues?: string[] } | null>(null)
   const [error, setError] = useState('')
@@ -59,6 +60,34 @@ export default function CreateProgramPage() {
         break
     }
     return missing
+  }
+
+  const handleAutoDraft = async () => {
+    if (!title.trim() || !subjectArea.trim()) {
+      setError('Please provide a Program Title and Subject Area first to use Auto-Draft.')
+      return
+    }
+    setIsDrafting(true)
+    setError('')
+    try {
+      const res = await draftPracticumProgramAction({
+        title,
+        category: gradeLevels || '',
+        schoolName: subjectArea, // Using Subject Area Context
+      })
+      if (res.success && 'description' in res) {
+        setDescription((res as any).description || '')
+        if ((res as any).learningObjectives) {
+          setLearningObjectives((res as any).learningObjectives)
+        }
+      } else {
+        setError(res.error || 'Failed to auto-draft.')
+      }
+    } catch {
+      setError('An unexpected error occurred during auto-drafting.')
+    } finally {
+      setIsDrafting(false)
+    }
   }
 
   const handleSaveDraft = async () => {
@@ -210,7 +239,24 @@ export default function CreateProgramPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Program Description *</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Program Description *</label>
+                    <button
+                      type="button"
+                      onClick={handleAutoDraft}
+                      disabled={isDrafting}
+                      className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                    >
+                      {isDrafting ? (
+                        <>
+                          <span className="w-3 h-3 rounded-full border-2 border-emerald-600 dark:border-emerald-400 border-t-transparent animate-spin"></span>
+                          Drafting...
+                        </>
+                      ) : (
+                        <>✨ Auto-Draft with AI</>
+                      )}
+                    </button>
+                  </div>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}

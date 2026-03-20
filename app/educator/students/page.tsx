@@ -4,12 +4,31 @@ import React, { useState, useEffect } from 'react'
 import { Navbar } from '@/components/Navbar'
 import { createBrowserClient } from '@supabase/ssr'
 import Link from 'next/link'
+import { generateMatchesAction } from '@/app/actions'
 
 export default function EducatorStudentsPage() {
   const [students, setStudents] = useState<any[]>([])
   const [programs, setPrograms] = useState<any[]>([])
   const [selectedProgram, setSelectedProgram] = useState('all')
   const [isLoading, setIsLoading] = useState(true)
+
+  // Matching Copilot State
+  const [matchingStudentId, setMatchingStudentId] = useState<string | null>(null)
+  const [matchesForStudent, setMatchesForStudent] = useState<any>(null)
+  const [isMatching, setIsMatching] = useState(false)
+
+  const handleFindMatches = async (student: any) => {
+    setIsMatching(true)
+    setMatchingStudentId(student.id)
+    const res = await generateMatchesAction(student.id)
+    if (res.success && res.data) {
+      setMatchesForStudent({ student, matches: res.data })
+    } else {
+      alert(res.error || 'Failed to find matches')
+      setMatchingStudentId(null)
+    }
+    setIsMatching(false)
+  }
 
   useEffect(() => {
     async function load() {
@@ -167,16 +186,27 @@ export default function EducatorStudentsPage() {
                           </span>
                         </td>
                         <td className="px-5 py-4">
-                          <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${
-                            student.placementStatus === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30' :
-                            student.placementStatus === 'completed' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30' :
-                            student.placementStatus === 'invited' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30' :
-                            'bg-amber-100 text-amber-700 dark:bg-amber-900/30'
-                          }`}>
-                            {student.placementStatus === 'active' ? 'Active' :
-                             student.placementStatus === 'completed' ? 'Completed' :
-                             student.placementStatus === 'invited' ? 'Invited' : 'Pending'}
-                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${
+                              student.placementStatus === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30' :
+                              student.placementStatus === 'completed' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30' :
+                              student.placementStatus === 'invited' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30' :
+                              'bg-amber-100 text-amber-700 dark:bg-amber-900/30'
+                            }`}>
+                              {student.placementStatus === 'active' ? 'Active' :
+                               student.placementStatus === 'completed' ? 'Completed' :
+                               student.placementStatus === 'invited' ? 'Invited' : 'Pending'}
+                            </span>
+                            {(!student.placementStatus || student.placementStatus === 'invited' || student.placementStatus === 'pending') && student.profile_complete && (
+                              <button 
+                                onClick={() => handleFindMatches(student)}
+                                disabled={isMatching}
+                                className="text-[11px] font-bold text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 dark:bg-brand-900/30 dark:hover:bg-brand-900/50 px-2 py-1 rounded-md transition-colors border border-brand-200 dark:border-brand-800/50 shadow-sm flex items-center gap-1 whitespace-nowrap"
+                              >
+                                {isMatching && matchingStudentId === student.id ? '✨ Analyzing...' : '✨ Find Matches'}
+                              </button>
+                            )}
+                          </div>
                         </td>
                         <td className="px-5 py-4 text-sm text-slate-600 dark:text-slate-400">{student.company || '—'}</td>
                       </tr>
@@ -188,6 +218,47 @@ export default function EducatorStudentsPage() {
           )}
         </div>
       </main>
+
+      {/* Matches Modal */}
+      {matchesForStudent && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[2rem] shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-brand-50/50 dark:bg-brand-900/10">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">✨</span>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">AI Placement Matches</h3>
+                  <p className="text-sm text-slate-500 font-medium">Top 3 recommendations for {matchesForStudent.student.first_name} {matchesForStudent.student.last_name}</p>
+                </div>
+              </div>
+              <button onClick={() => { setMatchesForStudent(null); setMatchingStudentId(null) }} className="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 w-8 h-8 rounded-full flex items-center justify-center transition-colors">✕</button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex flex-col gap-4">
+              {matchesForStudent.matches.length === 0 ? (
+                <div className="text-center p-8 text-slate-500">No active matches found.</div>
+              ) : (
+                matchesForStudent.matches.map((match: any, idx: number) => (
+                  <div key={match.opportunityId} className="bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl p-5 hover:border-brand-300 dark:hover:border-brand-700 transition-colors">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <span className="text-xs font-black text-brand-600 uppercase tracking-widest mb-1 block">Match #{idx + 1}</span>
+                        <h4 className="text-lg font-bold text-slate-900 dark:text-white">{match.title}</h4>
+                        <p className="text-sm text-slate-500 font-medium">{match.company}</p>
+                      </div>
+                      <Link href={`/opportunity/${match.opportunityId}`} target="_blank" className="text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 px-3 py-1.5 rounded-lg">View Role</Link>
+                    </div>
+                    <div className="mt-4 bg-brand-50 dark:bg-brand-900/20 text-brand-800 dark:text-brand-200 text-sm p-3 rounded-xl leading-relaxed border border-brand-100 dark:border-brand-800/50">
+                      <strong>AI Reasoning:</strong> {match.reason}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

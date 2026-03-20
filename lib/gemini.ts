@@ -745,6 +745,134 @@ If approved, all issue arrays should be empty. A post must be BLOCKED (approved:
 }
 
 // ============================================
+// Educator: Generate Practicum Draft (AI)
+// ============================================
+export interface PracticumDraftResult {
+  description: string
+  learningObjectives: string
+}
+
+export async function generatePracticumDraft(data: {
+  title: string
+  category: string
+  schoolName: string
+}): Promise<PracticumDraftResult> {
+  if (!GEMINI_API_KEY) {
+    return {
+      description: 'AI drafting unavailable — API key not configured.',
+      learningObjectives: 'AI drafting unavailable — API key not configured.',
+    }
+  }
+
+  const prompt = `You are an educational curriculum assistant helping a high school teacher draft a Practicum Program description and learning objectives.
+
+Program Context:
+- School: ${data.schoolName}
+- Title: "${data.title}"
+- Subject Area/Category: ${data.category || 'General'}
+
+Write:
+1. "description": A warm, professional 3-4 sentence paragraph describing the program. Explain what the students will experience, what type of workplace environments they are looking for, and what general skills they will develop. Keep it focused on the value to the employer while highlighting student growth.
+2. "learningObjectives": 3-4 bullet points specifically listing what students will learn. Start each bullet with an action verb (e.g. "Apply", "Develop", "Understand", "Complete"). Output as a single string with newlines and bullet points (•).
+
+Respond ONLY in this exact JSON format (no markdown, no code blocks):
+{
+  "description": "paragraph...",
+  "learningObjectives": "• Obj 1\\n• Obj 2"
+}
+
+JSON response:`
+
+  try {
+    const response = await callGemini(prompt)
+    let jsonStr = response.trim()
+    jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '')
+    const objMatch = jsonStr.match(/\\{[\\s\\S]*\\}/)
+    if (objMatch) jsonStr = objMatch[0]
+
+    const result = JSON.parse(jsonStr)
+    return {
+      description: result.description || '',
+      learningObjectives: result.learningObjectives || '',
+    }
+  } catch (err) {
+    console.error('[Gemini] Practicum draft error:', err)
+    return {
+      description: 'Could not generate draft description. Please try again.',
+      learningObjectives: 'Could not generate learning objectives. Please try again.',
+    }
+  }
+}
+
+// ============================================
+// Student: Generate Resume via AI
+// ============================================
+export interface ResumeExperience {
+  title: string
+  entity: string
+  bullets: string[]
+}
+
+export interface StudentResumeResult {
+  experiences: ResumeExperience[]
+  skills: string[]
+}
+
+export async function generateStudentResume(input: string): Promise<StudentResumeResult> {
+  if (!GEMINI_API_KEY) {
+    return {
+      experiences: [],
+      skills: [],
+    }
+  }
+
+  const prompt = `You are a professional resume writer helping a high school student translate their informal experiences (hobbies, clubs, part-time jobs) into professional resume bullets.
+
+Input: "${input}"
+
+Your task is to identify distinct roles/experiences in the input and return them as a JSON object with:
+1. "experiences": An array where each object has:
+   - "title": Professional title (e.g. "Customer Service Associate")
+   - "entity": The organization, club, or business (e.g. "Starbucks")
+   - "bullets": An array of 2-3 strong, action-oriented bullet points starting with strong verbs, highlighting achievements and responsibilities.
+2. "skills": An array of 3-5 professional skills extracted from the input (e.g. "Communication", "Social Media Marketing").
+
+Respond ONLY in this exact JSON format (no markdown, no code blocks):
+{
+  "experiences": [
+    {
+      "title": "...",
+      "entity": "...",
+      "bullets": ["...", "..."]
+    }
+  ],
+  "skills": ["...", "..."]
+}
+
+JSON response:`
+
+  try {
+    const response = await callGemini(prompt)
+    let jsonStr = response.trim()
+    jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '')
+    const objMatch = jsonStr.match(/\\{[\\s\\S]*\\}/)
+    if (objMatch) jsonStr = objMatch[0]
+
+    const result = JSON.parse(jsonStr)
+    return {
+      experiences: Array.isArray(result.experiences) ? result.experiences : [],
+      skills: Array.isArray(result.skills) ? result.skills : [],
+    }
+  } catch (err) {
+    console.error('[Gemini] Student resume draft error:', err)
+    return {
+      experiences: [],
+      skills: [],
+    }
+  }
+}
+
+// ============================================
 // Educator Email Domain Validation
 // ============================================
 export function isEducatorEmailDomain(email: string): boolean {
@@ -761,5 +889,163 @@ export function isEducatorEmailDomain(email: string): boolean {
   if (domain.endsWith('.org')) return true
 
   return false
+}
+
+// ============================================
+// Employer AI: Candidate Communications Drafter
+// ============================================
+export async function generateEmployerMessageDraft(
+  studentName: string,
+  roleTitle: string,
+  intent: 'interview' | 'rejection' | 'offer'
+): Promise<string> {
+  if (!GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY is missing')
+  }
+
+  const instructions: Record<string, string> = {
+    interview: "Write a short, friendly, and highly encouraging message inviting the high-school student to a brief interview (either online or in-person). Suggest they provide a few times they are free next week.",
+    rejection: "Write a gentle, highly encouraging rejection message. Thank them specifically for applying, state that you've moved forward with other candidates at this time, but encourage them to keep building their skills.",
+    offer: "Write a celebratory, exciting offer message! Congratulate them on being selected, mention what the next steps will be (onboarding, parent signatures, etc.), and welcome them to the team."
+  }
+
+  const prompt = `You are an HR professional or Business Manager hiring a high-school student on the InternPick platform.
+  
+Student Name: ${studentName}
+Role Applied For: ${roleTitle}
+Intent: ${intent}
+
+Instructions:
+${instructions[intent]}
+
+Keep the message to 1-2 short paragraphs max. Maintain a highly professional, polite, and warmly encouraging tone suitable for a high-schooler taking their first professional steps. Do not include signature blocks or bracketed placeholders like "[Your Name]" or "[Company Name]". Return ONLY the text of the message.
+`
+
+  try {
+    const response = await callGemini(prompt)
+    const rawText = response.replace(/^["']|["']$/g, '').trim()
+    return rawText
+  } catch (err: any) {
+    console.error('[Gemini] generateEmployerMessageDraft error:', err)
+    throw new Error(err.message || 'Failed to generate employer message')
+  }
+}
+
+// ============================================
+// Student AI: Guided Journaling Copilot
+// ============================================
+export async function generateJournalQuestion(
+  chatHistory: Array<{ role: 'user' | 'assistant', content: string }>
+): Promise<string> {
+  if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is missing');
+
+  const formattedHistory = chatHistory.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n');
+
+  const prompt = `You are a friendly, encouraging AI journal copilot for high-school students doing an internship.
+Your goal is to ask 1 simple, engaging follow-up question to help them reflect on their week.
+
+Chat History:
+${formattedHistory}
+
+Instructions:
+Ask ONE highly engaging, brief follow-up question (1-2 sentences). Do not answer for the student. Do not use quotes around your response. Keep a casual, warm tone.`;
+
+  try {
+    const response = await callGemini(prompt);
+    return response.replace(/^["']|["']$/g, '').trim();
+  } catch (err: any) {
+    console.error('[Gemini] generateJournalQuestion error:', err);
+    throw new Error('Failed to generate journal question');
+  }
+}
+
+export async function synthesizeJournalEntry(
+  chatHistory: Array<{ role: 'user' | 'assistant', content: string }>
+): Promise<string> {
+  if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is missing');
+
+  const formattedHistory = chatHistory.filter(m => m.role === 'user').map(m => m.content).join('\n---\n');
+
+  const prompt = `You are a professional editor. A high-school student has been chatting about their internship week. 
+Take their informal thoughts and synthesize them into a SINGLE, beautifully written, cohesive, formal paragraph (reflection) written in the first-person ("I").
+
+Student's thoughts:
+${formattedHistory}
+
+Instructions:
+Write ONE cohesive, professional reflection paragraph. Do not use markdown quotes. Make it sound mature but still authentic to a high schooler. Fix spelling but do not invent new facts.`;
+
+  try {
+    const response = await callGemini(prompt);
+    return response.replace(/^["']|["']$/g, '').trim();
+  } catch (err: any) {
+    console.error('[Gemini] synthesizeJournalEntry error:', err);
+    throw new Error('Failed to synthesize journal entry');
+  }
+}
+
+// ============================================
+// Educator AI: Smart Matching Copilot
+// ============================================
+export async function suggestPlacements(
+  studentProfile: { firstName: string, lastName: string, gradeLevel: string, careerInterests: string[], bio: string, resume: string },
+  opportunities: Array<{ id: string, title: string, company: string, description: string }>
+): Promise<Array<{ opportunityId: string, reason: string }>> {
+  if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is missing');
+
+  const prompt = `You are an expert career counselor AI. Your job is to match a high school student with the best local internship opportunities.
+You will be provided with the student's profile and a list of available opportunities.
+
+STUDENT PROFILE:
+Name: ${studentProfile.firstName} ${studentProfile.lastName}
+Grade: ${studentProfile.gradeLevel}
+Interests: ${studentProfile.careerInterests?.join(', ')}
+Bio: ${studentProfile.bio}
+Resume/Skills: ${studentProfile.resume}
+
+AVAILABLE OPPORTUNITIES:
+${JSON.stringify(opportunities, null, 2)}
+
+INSTRUCTIONS:
+Select the TOP 3 best internship matches for this student based on their profile and the available opportunities. 
+Return your answer ONLY as a valid JSON array of objects. Do not include markdown codeblocks (\`\`\`json) or any other text.
+Each object must have exactly two keys:
+1. "opportunityId": the exact 'id' string of the matched opportunity.
+2. "reason": a 1-sentence very encouraging explanation of why this is a great fit for the student.
+
+Make sure the reason uses the student's name in a supportive way. Return exactly 3 matches (or fewer if less than 3 are available).`;
+
+  try {
+    const response = await callGemini(prompt);
+    const jsonStr = response.replace(/^```json|```$/gi, '').trim()
+    return JSON.parse(jsonStr);
+  } catch (err: any) {
+    console.error('[Gemini] suggestPlacements error:', err);
+    throw new Error('Failed to suggest placements');
+  }
+}
+
+// ============================================
+// Student AI: Professional Communication Coach
+// ============================================
+export async function polishStudentMessage(rawText: string): Promise<string> {
+  if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is missing');
+
+  const prompt = `You are a professional communication coach for a high school student chatting with a potential employer.
+The student has drafted a message. 
+Rewrite the message to be highly polite, professional, and grammatically correct.
+DO NOT change the core meaning or invent new facts. Remove heavy slang. Keep it concise.
+Return ONLY the rewritten professional text, no quotes or additional commentary.
+
+Original message:
+"${rawText}"`;
+
+  try {
+    const response = await callGemini(prompt);
+    return response.replace(/^["']|["']$/g, '').trim();
+  } catch (err: any) {
+    console.error('[Gemini] polishStudentMessage error:', err);
+    throw new Error('Failed to polish student message');
+  }
 }
 

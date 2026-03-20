@@ -5,17 +5,33 @@ import { Navbar } from '@/components/Navbar'
 import { Button } from '@/components/ui/Button'
 import Link from 'next/link'
 
+import { generateStudentResumeAction } from '@/app/actions'
+import { ResumeExperience } from '@/lib/gemini'
+
 export default function StudentResumeBuilderPage() {
   const [step, setStep] = useState(1)
   const [inputText, setInputText] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
+  const [resumeData, setResumeData] = useState<{ experiences: ResumeExperience[], skills: string[] } | null>(null)
+  const [error, setError] = useState('')
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
+    if (!inputText.trim()) return
     setIsGenerating(true)
-    setTimeout(() => {
+    setError('')
+    try {
+      const res = await generateStudentResumeAction(inputText)
+      if (res.success && res.data) {
+        setResumeData(res.data)
+        setStep(2)
+      } else {
+        setError(res.error || 'Failed to generate resume.')
+      }
+    } catch {
+      setError('An unexpected error occurred.')
+    } finally {
       setIsGenerating(false)
-      setStep(2)
-    }, 2000)
+    }
   }
 
   return (
@@ -79,6 +95,11 @@ export default function StudentResumeBuilderPage() {
                         Generate My Resume <span className="group-hover:translate-x-1 transition-transform">→</span>
                       </span>
                     )}
+                    {error && (
+                      <div className="mt-4 px-4 py-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-400 text-sm font-medium rounded-xl flex items-center justify-start gap-2">
+                        <span>⚠️</span> {error}
+                      </div>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -108,32 +129,30 @@ export default function StudentResumeBuilderPage() {
                     </h4>
                     
                     <div className="flex flex-col gap-4">
-                      <div className="p-6 bg-gradient-to-br from-brand-50 to-white dark:from-brand-900/20 dark:to-slate-900 border border-brand-200 dark:border-brand-800/50 rounded-2xl shadow-sm">
-                        <h5 className="font-bold text-slate-900 dark:text-white text-lg mb-1">Social Media Coordinator</h5>
-                        <p className="text-xs font-semibold text-brand-600 dark:text-brand-400 mb-3">Springfield High School Debate Team</p>
-                        <ul className="list-disc list-inside text-sm text-slate-700 dark:text-slate-300 space-y-2">
-                          <li>Managed and grew official Instagram presence, driving a 500+ increase in organic followers within one academic year.</li>
-                          <li>Designed digital promotional content to increase student engagement and event attendance.</li>
-                        </ul>
-                      </div>
-
-                      <div className="p-6 bg-gradient-to-br from-brand-50 to-white dark:from-brand-900/20 dark:to-slate-900 border border-brand-200 dark:border-brand-800/50 rounded-2xl shadow-sm">
-                        <h5 className="font-bold text-slate-900 dark:text-white text-lg mb-1">Customer Service Associate</h5>
-                        <p className="text-xs font-semibold text-brand-600 dark:text-brand-400 mb-3">Starbucks Coffee Company</p>
-                        <ul className="list-disc list-inside text-sm text-slate-700 dark:text-slate-300 space-y-2">
-                          <li>Delivered high-quality customer service in a fast-paced retail environment, fulfilling complex orders efficiently.</li>
-                          <li>Developed strong interpersonal communication skills through daily verbal interactions with diverse customers.</li>
-                        </ul>
-                      </div>
-
-                      <div className="mt-2">
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Detected Skills Added to Profile:</p>
-                        <div className="flex flex-wrap gap-2">
-                          <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold">Social Media Marketing</span>
-                          <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold">Customer Service</span>
-                          <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold">Communication</span>
+                      {resumeData?.experiences?.map((exp, idx) => (
+                        <div key={idx} className="p-6 bg-gradient-to-br from-brand-50 to-white dark:from-brand-900/20 dark:to-slate-900 border border-brand-200 dark:border-brand-800/50 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                          <h5 className="font-bold text-slate-900 dark:text-white text-lg mb-1">{exp.title}</h5>
+                          <p className="text-xs font-semibold text-brand-600 dark:text-brand-400 mb-3">{exp.entity}</p>
+                          <ul className="list-disc list-inside text-sm text-slate-700 dark:text-slate-300 space-y-2">
+                            {exp.bullets?.map((bullet, bIdx) => (
+                              <li key={bIdx} className="leading-relaxed">{bullet}</li>
+                            ))}
+                          </ul>
                         </div>
-                      </div>
+                      ))}
+
+                      {resumeData?.skills && resumeData.skills.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Detected Skills Added to Profile:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {resumeData.skills.map((skill, idx) => (
+                              <span key={idx} className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold ring-1 ring-slate-200 dark:ring-slate-700">
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                   </div>
