@@ -582,11 +582,10 @@ export async function getRolePrep(opportunityId: string) {
     .select('interests_array, high_school_name')
     .eq('id', studentId)
     .single() : { data: null }
-
   console.log('[RolePrep] Student profile:', student ? 'found' : 'not found')
 
   // Build prompt
-  const studentCtx = student 
+  const studentCtx = student
     ? `\nStudent: Interests: ${student.interests_array?.join(', ') || 'N/A'}, School: ${student.high_school_name || 'N/A'}`
     : '\nNo student profile — provide general advice.'
 
@@ -2133,7 +2132,7 @@ export async function generateStudentResumeAction(inputText: string) {
 // ============================================
 // Employer: AI Message Drafter
 // ============================================
-export async function draftEmployerMessageAction(studentName: string, roleTitle: string, intent: string) {
+export async function draftEmployerMessageAction(intent: string, roleTitle: string) {
   const supabase = await createClient()
   try {
     await requireAuth(supabase)
@@ -2141,16 +2140,16 @@ export async function draftEmployerMessageAction(studentName: string, roleTitle:
     return { success: false, error: 'You must be logged in to use this feature' }
   }
 
-  if (!studentName || !roleTitle || !intent) {
+  if (!roleTitle || !intent) {
     return { success: false, error: 'Missing required parameters' }
   }
 
-  if (!['interview', 'rejection', 'offer'].includes(intent)) {
-    return { success: false, error: 'Invalid message intent' }
-  }
+  let aiIntent: 'offer' | 'interview' | 'rejection' = 'interview'
+  if (intent === 'offer') aiIntent = 'offer'
+  if (intent === 'reject') aiIntent = 'rejection'
 
   try {
-    const draft = await aiGenerateEmployerMessageDraft(studentName, roleTitle, intent as any)
+    const draft = await aiGenerateEmployerMessageDraft('The candidate', roleTitle, aiIntent)
     return { success: true, data: draft }
   } catch (error: any) {
     console.error('[DraftMessage] Error:', error)
@@ -2271,7 +2270,7 @@ export async function demoModerateMessageAction(text: string) {
   // Exposes moderateMessage specifically for the Student UI Demo to trigger the PII Shield
   try {
     const res = await moderateMessage(text, 'student')
-    return { success: true, isSafe: res.isSafe, reason: res.reason, category: res.category }
+    return { success: true, isSafe: res.safe, reason: res.reason, category: res.category }
   } catch (err: any) {
     return { success: false, error: 'Moderation failed' }
   }

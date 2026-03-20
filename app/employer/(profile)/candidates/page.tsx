@@ -92,7 +92,7 @@ export default function CandidatesPage() {
     }
     setIsDrafting(true)
     setDmError('')
-    const res = await draftEmployerMessageAction(dmCandidate.name, dmCandidate.roleTitle, intent)
+    const res = await draftEmployerMessageAction(intent, dmCandidate.roleTitle)
     if (res.success && res.data) {
       setDmText(res.data)
     } else {
