@@ -36,7 +36,15 @@ export async function updateSession(request: NextRequest) {
 
   // Protected routes — redirect to login if not authenticated
   const protectedRoutes = ['/student', '/employer', '/educator', '/account']
-  const isProtected = protectedRoutes.some(route => pathname.startsWith(route))
+  
+  // Exclude specific public-facing routes from the auth wall to allow SEO & Social Sharing
+  const publicExceptions = [
+    '/employer/role/',
+    '/employer/programs/' // Employers need to view programs and apply without logging in first (they can log in during the flow)
+  ]
+  
+  const isProtected = protectedRoutes.some(route => pathname.startsWith(route)) 
+    && !publicExceptions.some(ex => pathname.startsWith(ex))
   
   if (isProtected && !user) {
     const url = request.nextUrl.clone()

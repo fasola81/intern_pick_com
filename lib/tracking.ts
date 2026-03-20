@@ -5,6 +5,8 @@ export type GA4Event =
   | { event: 'employer_program_application_submitted'; program_id: string }
   | { event: 'educator_program_published'; program_title?: string }
   | { event: 'ai_feature_utilized'; feature_name: string }
+  | { event: 'invite_link_generated'; feature_name: string }
+  | { event: 'invite_email_opened'; feature_name: string }
 
 /**
  * Trigger a typed GA4 event. Assumes the raw gtag script 

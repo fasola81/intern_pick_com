@@ -4,12 +4,14 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { createBrowserClient } from '@supabase/ssr'
+import { InviteModule } from '@/components/InviteModule'
 
 export default function EmployerOverviewPage() {
   const [ownerFirstName, setOwnerFirstName] = useState('')
   const [applications, setApplications] = useState<any[]>([])
   const [placementCount, setPlacementCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
+  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchData() {
@@ -19,6 +21,7 @@ export default function EmployerOverviewPage() {
       )
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setIsLoading(false); return }
+      setUserId(user.id)
 
       // Get owner name
       const { data: company } = await supabase
@@ -210,6 +213,12 @@ export default function EmployerOverviewPage() {
               </div>
             </Link>
 
+          </div>
+
+          {/* Grow Your Network */}
+          <div className="flex flex-col gap-3 mt-4">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Refer a Business</h4>
+            <InviteModule type="business" userId={userId || undefined} />
           </div>
 
           {/* Trust Badge */}

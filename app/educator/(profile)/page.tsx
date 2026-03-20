@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { createBrowserClient } from '@supabase/ssr'
+import { InviteModule } from '@/components/InviteModule'
 
 interface PracticumProgram {
   id: string
@@ -21,6 +22,7 @@ export default function EducatorDashboardPage() {
   const [programs, setPrograms] = useState<PracticumProgram[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [stats, setStats] = useState({ total: 0, seekingHosts: 0, active: 0, placements: 0 })
+  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchData() {
@@ -30,6 +32,7 @@ export default function EducatorDashboardPage() {
       )
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setIsLoading(false); return }
+      setUserId(user.id)
 
       // Get programs
       const { data: progs } = await supabase
@@ -132,25 +135,30 @@ export default function EducatorDashboardPage() {
           ) : (
             <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200/80 dark:border-slate-800 shadow-[0_2px_12px_-3px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
               {programs.map((program) => (
-                <Link key={program.id} href={`/educator/program/${program.id}`} className="block">
-                  <div className="p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 flex items-center justify-center flex-shrink-0">
-                        <span className="text-lg">🎓</span>
+                <div key={program.id} className="flex flex-col border-b last:border-0 border-slate-100 dark:border-slate-800">
+                  <Link href={`/educator/program/${program.id}`} className="block">
+                    <div className="p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 flex items-center justify-center flex-shrink-0">
+                          <span className="text-lg">🎓</span>
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-900 dark:text-white">{program.title}</h4>
+                          <p className="text-xs text-slate-500 font-medium mt-0.5">
+                            {program.subject_area || 'General'} • {program.grade_levels || 'All Grades'}
+                            {program.required_total_hours ? ` • ${program.required_total_hours}hrs` : ''}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-bold text-slate-900 dark:text-white">{program.title}</h4>
-                        <p className="text-xs text-slate-500 font-medium mt-0.5">
-                          {program.subject_area || 'General'} • {program.grade_levels || 'All Grades'}
-                          {program.required_total_hours ? ` • ${program.required_total_hours}hrs` : ''}
-                        </p>
+                      <div className="flex items-center gap-3">
+                        {statusBadge(program.status)}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      {statusBadge(program.status)}
-                    </div>
+                  </Link>
+                  <div className="px-5 pb-5">
+                    <InviteModule type="program" programId={program.id} programTitle={program.title} userId={userId || undefined} />
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}
@@ -191,6 +199,15 @@ export default function EducatorDashboardPage() {
               </div>
             </Link>
 
+          </div>
+        </section>
+
+        {/* Grow Your Network */}
+        <section className="flex flex-col gap-4">
+          <h3 className="font-bold text-slate-900 dark:text-white text-lg">Grow Your Network</h3>
+          <div className="flex flex-col gap-3">
+            <InviteModule type="business" userId={userId || undefined} />
+            <InviteModule type="school" userId={userId || undefined} />
           </div>
         </section>
 
