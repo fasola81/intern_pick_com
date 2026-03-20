@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
+import { trackEvent } from '@/lib/tracking'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -41,6 +42,8 @@ export default function LoginPage() {
     const { data: { user } } = await supabase.auth.getUser()
     const role = user?.user_metadata?.role || 'student'
     
+    trackEvent({ event: 'auth_login', role })
+
     if (role === 'employer') {
       router.push('/employer')
     } else if (role === 'educator') {

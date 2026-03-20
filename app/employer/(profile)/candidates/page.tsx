@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { getCandidatesByRole, updateCandidateStatus, sendCandidateMessage, getCandidateMessages, draftEmployerMessageAction } from '@/app/actions'
+import { trackEvent } from '@/lib/tracking'
 
 type CandidateMsg = { id: string; sender_id: string; sender_role: string; text: string; created_at: string }
 type Candidate = {
@@ -95,6 +96,7 @@ export default function CandidatesPage() {
     const res = await draftEmployerMessageAction(intent, dmCandidate.roleTitle)
     if (res.success && res.data) {
       setDmText(res.data)
+      trackEvent({ event: 'ai_feature_utilized', feature_name: 'employer_message_drafter' })
     } else {
       setDmError(res.error || 'Failed to draft AI message.')
     }

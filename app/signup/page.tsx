@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
+import { trackEvent } from '@/lib/tracking'
 
 function SignupForm() {
   const searchParams = useSearchParams()
@@ -82,6 +83,7 @@ function SignupForm() {
       return
     }
 
+    trackEvent({ event: 'auth_signup', role })
     setSuccess(true)
   }
 

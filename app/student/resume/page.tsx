@@ -7,6 +7,7 @@ import Link from 'next/link'
 
 import { generateStudentResumeAction } from '@/app/actions'
 import { ResumeExperience } from '@/lib/gemini'
+import { trackEvent } from '@/lib/tracking'
 
 export default function StudentResumeBuilderPage() {
   const [step, setStep] = useState(1)
@@ -23,6 +24,7 @@ export default function StudentResumeBuilderPage() {
       const res = await generateStudentResumeAction(inputText)
       if (res.success && res.data) {
         setResumeData(res.data)
+        trackEvent({ event: 'ai_feature_utilized', feature_name: 'resume_builder' })
         setStep(2)
       } else {
         setError(res.error || 'Failed to generate resume.')

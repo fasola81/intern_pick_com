@@ -6,6 +6,7 @@ import { Navbar } from '@/components/Navbar'
 import { Button } from '@/components/ui/Button'
 import { createBrowserClient } from '@supabase/ssr'
 import { submitHostApplication } from '@/app/actions'
+import { trackEvent } from '@/lib/tracking'
 
 export default function ApplyToHostPage() {
   const { id: programId } = useParams()
@@ -70,6 +71,7 @@ export default function ApplyToHostPage() {
         capacity: parseInt(capacity) || 1,
       })
       if (result.success) {
+        trackEvent({ event: 'employer_program_application_submitted', program_id: programId })
         setSubmitted(true)
       } else {
         setError(result.error || 'Failed to submit application')

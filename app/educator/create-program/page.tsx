@@ -5,6 +5,7 @@ import { Navbar } from '@/components/Navbar'
 import { Button } from '@/components/ui/Button'
 import { useRouter } from 'next/navigation'
 import { createPracticumProgram, moderateAndPublishPracticumAction, draftPracticumProgramAction } from '@/app/actions'
+import { trackEvent } from '@/lib/tracking'
 
 export default function CreateProgramPage() {
   const router = useRouter()
@@ -123,6 +124,7 @@ export default function CreateProgramPage() {
       const result = await moderateAndPublishPracticumAction(savedProgramId)
       if (result.success) {
         setPublishResult({ success: true })
+        trackEvent({ event: 'educator_program_published', program_title: subjectArea })
         setTimeout(() => router.push('/educator'), 2000)
       } else {
         const issues: string[] = []

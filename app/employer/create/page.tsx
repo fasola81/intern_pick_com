@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createOpportunity, polishCompanyAbout, moderateOpportunityContent, generateAndUploadRoleImageAction, suggestSkillTagsAction, reviewDOLComplianceAction } from '@/app/actions'
+import { trackEvent } from '@/lib/tracking'
 import { STATE_MINIMUM_WAGES, FEDERAL_MINIMUM_WAGE, getMinimumWageByAbbr } from '@/lib/minimumWages'
 import { PREBUILT_AVATARS } from '@/lib/prebuilt-avatars'
 
@@ -280,6 +281,7 @@ export default function CreateRolePage() {
         throw new Error(result.error || 'Failed to create opportunity. Please try again.')
       }
       console.log('[Create Role] Result:', result)
+      trackEvent({ event: 'employer_opportunity_created', title })
       router.push('/employer')
     } catch (err: any) {
       console.error('[Create Role] Error:', err)
