@@ -56,9 +56,8 @@ function EducatorOnboardingWizard() {
       const result = await registerEducator({
         fullName,
         schoolName,
-        schoolDistrict: schoolDistrict || undefined,
+        district: schoolDistrict || undefined,
         title,
-        department: department || undefined,
       })
       if (result.success) {
         router.push('/educator')

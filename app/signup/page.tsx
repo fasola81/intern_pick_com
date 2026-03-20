@@ -1,13 +1,13 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { Navbar } from '@/components/Navbar'
 import { Button } from '@/components/ui/Button'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 
-export default function SignupPage() {
+function SignupForm() {
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -307,5 +307,17 @@ export default function SignupPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center">
+        <div className="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
+      </div>
+    }>
+      <SignupForm />
+    </Suspense>
   )
 }
